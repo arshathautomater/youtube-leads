@@ -161,7 +161,7 @@ export async function getVideos(opts: { status?: string; minSubs?: number; maxSu
   await ensureSchema();
   const c = getClient();
   const conditions: string[] = [];
-  const args: unknown[] = [];
+  const args: (string | number | null)[] = [];
 
   if (opts.status && opts.status !== 'all') { conditions.push('pitch_status = ?'); args.push(opts.status); }
   if (opts.minSubs !== undefined) { conditions.push('channel_subscribers >= ?'); args.push(opts.minSubs); }
