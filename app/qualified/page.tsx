@@ -1,0 +1,159 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Star, ArrowLeft, Download } from 'lucide-react';
+import Link from 'next/link';
+import QualifiedTable from '@/components/QualifiedTable';
+import type { QualifiedChannel, OutreachStatus } from '@/lib/types';
+
+function exportCsv(channels: QualifiedChannel[]) {
+  const headers = ['Channel', 'Handle', 'Channel URL', 'Subscribers', 'Country', 'Email', 'Twitter/X', 'Instagram', 'Status', 'Notes', 'Qualified At'];
+  const rows = channels.map((ch) => [
+    `"${ch.channel_name.replace(/"/g, '""')}"`,
+    ch.channel_handle,
+    ch.channel_url,
+    ch.channel_subscribers,
+    ch.channel_country,
+    ch.contact_email,
+    ch.twitter_url,
+    ch.instagram_url,
+    ch.outreach_status,
+    `"${ch.notes.replace(/"/g, '""')}"`,
+    ch.qualified_at.slice(0, 10),
+  ]);
+  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'qualified-leads.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+const STATUS_COUNTS = ['new', 'contacted', 'replied', 'deal', 'pass'] as const;
+
+export default function QualifiedPage() {
+  const [channels, setChannels] = useState<QualifiedChannel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    fetch('/api/qualified')
+      .then((r) => r.json())
+      .then((d) => {
+        setChannels(d.channels ?? []);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleStatusChange = useCallback(async (channelId: string, status: OutreachStatus) => {
+    const res = await fetch(`/api/qualified/${channelId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ outreach_status: status }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setChannels((prev) => prev.map((ch) => ch.channel_id === channelId ? data.channel : ch));
+    }
+  }, []);
+
+  const handleRemove = useCallback(async (channelId: string) => {
+    const res = await fetch(`/api/qualified/${channelId}`, { method: 'DELETE' });
+    if (res.ok) {
+      setChannels((prev) => prev.filter((ch) => ch.channel_id !== channelId));
+    }
+  }, []);
+
+  const filtered = statusFilter === 'all' ? channels : channels.filter((ch) => ch.outreach_status === statusFilter);
+
+  const countsByStatus = STATUS_COUNTS.reduce<Record<string, number>>((acc, s) => {
+    acc[s] = channels.filter((ch) => ch.outreach_status === s).length;
+    return acc;
+  }, {});
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-12 flex flex-col gap-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-neutral-500 hover:text-neutral-300 transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="rounded-xl bg-yellow-600 p-2.5">
+              <Star className="h-6 w-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Qualified Leads</h1>
+          </div>
+          <p className="text-sm text-neutral-400 ml-14">
+            Channels you've qualified for outreach. Track your pitch pipeline here.
+          </p>
+        </div>
+        <button
+          onClick={() => exportCsv(filtered)}
+          disabled={filtered.length === 0}
+          className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </button>
+      </div>
+
+      {/* Stats */}
+      {channels.length > 0 && (
+        <div className="flex gap-3 flex-wrap">
+          {[
+            { label: 'Total', value: channels.length, color: 'bg-neutral-800 text-neutral-200' },
+            { label: 'New', value: countsByStatus.new, color: 'bg-neutral-700 text-neutral-200' },
+            { label: 'Contacted', value: countsByStatus.contacted, color: 'bg-blue-900/60 text-blue-300' },
+            { label: 'Replied', value: countsByStatus.replied, color: 'bg-yellow-900/60 text-yellow-300' },
+            { label: 'Deal', value: countsByStatus.deal, color: 'bg-green-900/60 text-green-300' },
+            { label: 'Pass', value: countsByStatus.pass, color: 'bg-neutral-800 text-neutral-500' },
+          ].map((stat) => (
+            <div key={stat.label} className={`rounded-xl px-4 py-2 text-sm font-medium ${stat.color}`}>
+              {stat.label}: {stat.value}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      {channels.length > 0 && (
+        <div className="flex gap-1">
+          {[
+            { value: 'all', label: 'All' },
+            { value: 'new', label: 'New' },
+            { value: 'contacted', label: 'Contacted' },
+            { value: 'replied', label: 'Replied' },
+            { value: 'deal', label: 'Deal' },
+            { value: 'pass', label: 'Pass' },
+          ].map((tab) => (
+            <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === tab.value
+                  ? 'bg-neutral-700 text-white'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
+              }`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 rounded-full border-2 border-yellow-500 border-t-transparent animate-spin" />
+        </div>
+      ) : (
+        <QualifiedTable
+          channels={filtered}
+          onStatusChange={handleStatusChange}
+          onRemove={handleRemove}
+        />
+      )}
+    </main>
+  );
+}
