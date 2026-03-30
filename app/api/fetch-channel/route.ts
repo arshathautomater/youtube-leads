@@ -31,6 +31,21 @@ function parseYouTubeUrl(url: string): { type: 'handle' | 'channelId' | 'videoId
   }
 }
 
+function extractSocialLinks(description: string): { email: string; twitter: string; instagram: string } {
+  const emailMatch = description.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+  const email = emailMatch ? emailMatch[0] : '';
+
+  // Twitter/X: twitter.com/handle or x.com/handle
+  const twitterMatch = description.match(/(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/@?([A-Za-z0-9_]{1,15})(?:[/?]|$|\s)/);
+  const twitter = twitterMatch ? `https://x.com/${twitterMatch[1]}` : '';
+
+  // Instagram: instagram.com/handle
+  const igMatch = description.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/@?([A-Za-z0-9_.]{1,30})(?:[/?]|$|\s)/);
+  const instagram = igMatch ? `https://instagram.com/${igMatch[1]}` : '';
+
+  return { email, twitter, instagram };
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const url = searchParams.get('url');
@@ -62,6 +77,7 @@ export async function GET(req: Request) {
   if (!ch) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
 
   const handle = ch.snippet.customUrl ? `@${ch.snippet.customUrl.replace(/^@/, '')}` : '';
+  const { email, twitter, instagram } = extractSocialLinks(ch.snippet.description ?? '');
 
   return NextResponse.json({
     channel_id: ch.id,
@@ -71,5 +87,8 @@ export async function GET(req: Request) {
     channel_thumbnail_url: ch.snippet.thumbnails?.default?.url ?? '',
     channel_subscribers: parseInt(ch.statistics?.subscriberCount ?? '0'),
     channel_country: ch.snippet.country ?? '',
+    contact_email: email,
+    twitter_url: twitter,
+    instagram_url: instagram,
   });
 }

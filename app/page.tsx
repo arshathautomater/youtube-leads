@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Youtube, AlertCircle, Star } from 'lucide-react';
+import { Youtube, AlertCircle, Star, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import SearchForm from '@/components/SearchForm';
 import FilterBar from '@/components/FilterBar';
@@ -130,14 +130,21 @@ export default function Home() {
             Find videos from US 🇺🇸 UK 🇬🇧 AU 🇦🇺 channels to pitch your editing service.
           </p>
         </div>
-        <Link href="/qualified"
-          className="flex items-center gap-2 rounded-xl border border-yellow-700/50 bg-yellow-950/30 px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-950/50 transition-colors">
-          <Star className="h-4 w-4" />
-          Qualified Leads
-          {qualifiedCount > 0 && (
-            <span className="ml-1 rounded-full bg-yellow-600 px-1.5 py-0.5 text-xs text-white font-medium">{qualifiedCount}</span>
-          )}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard"
+            className="flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors">
+            <BarChart3 className="h-4 w-4" />
+            Dashboard
+          </Link>
+          <Link href="/qualified"
+            className="flex items-center gap-2 rounded-xl border border-yellow-700/50 bg-yellow-950/30 px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-950/50 transition-colors">
+            <Star className="h-4 w-4" />
+            Qualified Leads
+            {qualifiedCount > 0 && (
+              <span className="ml-1 rounded-full bg-yellow-600 px-1.5 py-0.5 text-xs text-white font-medium">{qualifiedCount}</span>
+            )}
+          </Link>
+        </div>
       </div>
 
       {/* Search */}

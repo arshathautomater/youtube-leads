@@ -17,6 +17,9 @@ interface FetchedChannel {
   channel_thumbnail_url: string;
   channel_subscribers: number;
   channel_country: string;
+  contact_email: string;
+  twitter_url: string;
+  instagram_url: string;
 }
 
 function formatNum(n: number): string {
@@ -48,6 +51,9 @@ export default function AddLeadModal({ onClose, onAdd }: Props) {
       setFetchError(data.error ?? 'Failed to fetch channel');
     } else {
       setFetched(data);
+      setEmail(data.contact_email ?? '');
+      setTwitter(data.twitter_url ?? '');
+      setInstagram(data.instagram_url ?? '');
     }
     setFetching(false);
   }
