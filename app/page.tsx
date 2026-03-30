@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Youtube, AlertCircle, Star, BarChart3, Telescope, Plus } from 'lucide-react';
+import { Youtube, AlertCircle, Star, BarChart3, Telescope, Plus, Bell } from 'lucide-react';
 import Link from 'next/link';
 import SearchForm from '@/components/SearchForm';
 import FilterBar from '@/components/FilterBar';
@@ -31,16 +31,26 @@ export default function Home() {
   const [hasSearched, setHasSearched] = useState(false);
   const [qualifiedIds, setQualifiedIds] = useState<Set<string>>(new Set());
   const [qualifiedCount, setQualifiedCount] = useState(0);
+  const [followUpToday, setFollowUpToday] = useState<QualifiedChannel[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSimilarModal, setShowSimilarModal] = useState(false);
+
+  const CONTACTED_STATUSES = new Set(['contacted_x', 'contacted_instagram', 'contacted_skool', 'contacted_email']);
 
   useEffect(() => {
     fetch('/api/qualified')
       .then((r) => r.json())
       .then((d) => {
-        const ids = new Set<string>((d.channels ?? []).map((c: { channel_id: string }) => c.channel_id));
+        const channels: QualifiedChannel[] = d.channels ?? [];
+        const ids = new Set<string>(channels.map((c) => c.channel_id));
         setQualifiedIds(ids);
         setQualifiedCount(ids.size);
+        const due = channels.filter((c) => {
+          if (!c.contacted_at || !CONTACTED_STATUSES.has(c.outreach_status)) return false;
+          const daysSince = Math.floor((Date.now() - new Date(c.contacted_at).getTime()) / 86_400_000);
+          return daysSince >= 3;
+        });
+        setFollowUpToday(due);
       });
   }, []);
 
@@ -162,6 +172,36 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Follow-up reminders */}
+      {followUpToday.length > 0 && (
+        <div className="rounded-xl border border-orange-800/60 bg-orange-950/30 p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-orange-400" />
+            <span className="text-sm font-semibold text-orange-300">
+              Follow up today — {followUpToday.length} channel{followUpToday.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {followUpToday.map((ch) => {
+              const daysSince = Math.floor((Date.now() - new Date(ch.contacted_at).getTime()) / 86_400_000);
+              const overdue = daysSince - 3;
+              return (
+                <Link key={ch.channel_id} href="/qualified"
+                  className="flex items-center gap-2 rounded-lg bg-orange-900/40 hover:bg-orange-900/60 px-3 py-1.5 transition-colors">
+                  {ch.channel_thumbnail_url && (
+                    <img src={ch.channel_thumbnail_url} alt={ch.channel_name} className="h-5 w-5 rounded-full shrink-0" />
+                  )}
+                  <span className="text-xs text-orange-200 font-medium">{ch.channel_name}</span>
+                  {overdue > 0 && (
+                    <span className="text-[10px] text-red-400 font-medium">+{overdue}d overdue</span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <SearchForm onSearch={handleSearch} loading={loading} />
