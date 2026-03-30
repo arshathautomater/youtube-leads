@@ -1,5 +1,5 @@
 export type PitchStatus = 'not_pitched' | 'contacted' | 'replied' | 'closed';
-export type OutreachStatus = 'new' | 'contacted' | 'replied' | 'deal' | 'pass';
+export type OutreachStatus = 'new' | 'contacted_x' | 'contacted_instagram' | 'contacted_skool' | 'contacted_email' | 'follow_up_sent' | 'replied' | 'deal' | 'pass';
 
 export interface QualifiedChannel {
   channel_id: string;

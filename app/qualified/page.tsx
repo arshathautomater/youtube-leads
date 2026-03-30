@@ -31,7 +31,17 @@ function exportCsv(channels: QualifiedChannel[]) {
   URL.revokeObjectURL(url);
 }
 
-const STATUS_COUNTS = ['new', 'contacted', 'replied', 'deal', 'pass'] as const;
+const ALL_STATUSES = [
+  { value: 'new', label: 'New', color: 'bg-neutral-700 text-neutral-200' },
+  { value: 'contacted_x', label: 'Contacted in X', color: 'bg-sky-900/60 text-sky-300' },
+  { value: 'contacted_instagram', label: 'Contacted Instagram', color: 'bg-pink-900/60 text-pink-300' },
+  { value: 'contacted_skool', label: 'Contacted in Skool', color: 'bg-purple-900/60 text-purple-300' },
+  { value: 'contacted_email', label: 'Contacted in Email', color: 'bg-blue-900/60 text-blue-300' },
+  { value: 'follow_up_sent', label: 'Follow Up Sent', color: 'bg-orange-900/60 text-orange-300' },
+  { value: 'replied', label: 'Replied', color: 'bg-yellow-900/60 text-yellow-300' },
+  { value: 'deal', label: 'Deal', color: 'bg-green-900/60 text-green-300' },
+  { value: 'pass', label: 'Pass', color: 'bg-neutral-800 text-neutral-500' },
+] as const;
 
 export default function QualifiedPage() {
   const [channels, setChannels] = useState<QualifiedChannel[]>([]);
@@ -68,8 +78,8 @@ export default function QualifiedPage() {
 
   const filtered = statusFilter === 'all' ? channels : channels.filter((ch) => ch.outreach_status === statusFilter);
 
-  const countsByStatus = STATUS_COUNTS.reduce<Record<string, number>>((acc, s) => {
-    acc[s] = channels.filter((ch) => ch.outreach_status === s).length;
+  const countsByStatus = ALL_STATUSES.reduce<Record<string, number>>((acc, s) => {
+    acc[s.value] = channels.filter((ch) => ch.outreach_status === s.value).length;
     return acc;
   }, {});
 
@@ -104,16 +114,12 @@ export default function QualifiedPage() {
       {/* Stats */}
       {channels.length > 0 && (
         <div className="flex gap-3 flex-wrap">
-          {[
-            { label: 'Total', value: channels.length, color: 'bg-neutral-800 text-neutral-200' },
-            { label: 'New', value: countsByStatus.new, color: 'bg-neutral-700 text-neutral-200' },
-            { label: 'Contacted', value: countsByStatus.contacted, color: 'bg-blue-900/60 text-blue-300' },
-            { label: 'Replied', value: countsByStatus.replied, color: 'bg-yellow-900/60 text-yellow-300' },
-            { label: 'Deal', value: countsByStatus.deal, color: 'bg-green-900/60 text-green-300' },
-            { label: 'Pass', value: countsByStatus.pass, color: 'bg-neutral-800 text-neutral-500' },
-          ].map((stat) => (
-            <div key={stat.label} className={`rounded-xl px-4 py-2 text-sm font-medium ${stat.color}`}>
-              {stat.label}: {stat.value}
+          <div className="rounded-xl px-4 py-2 text-sm font-medium bg-neutral-800 text-neutral-200">
+            Total: {channels.length}
+          </div>
+          {ALL_STATUSES.filter((s) => countsByStatus[s.value] > 0).map((s) => (
+            <div key={s.value} className={`rounded-xl px-4 py-2 text-sm font-medium ${s.color}`}>
+              {s.label}: {countsByStatus[s.value]}
             </div>
           ))}
         </div>
@@ -121,22 +127,19 @@ export default function QualifiedPage() {
 
       {/* Filter tabs */}
       {channels.length > 0 && (
-        <div className="flex gap-1">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'new', label: 'New' },
-            { value: 'contacted', label: 'Contacted' },
-            { value: 'replied', label: 'Replied' },
-            { value: 'deal', label: 'Deal' },
-            { value: 'pass', label: 'Pass' },
-          ].map((tab) => (
-            <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
+        <div className="flex gap-1 flex-wrap">
+          <button onClick={() => setStatusFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'all' ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
+            }`}>
+            All
+          </button>
+          {ALL_STATUSES.map((s) => (
+            <button key={s.value} onClick={() => setStatusFilter(s.value)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === tab.value
-                  ? 'bg-neutral-700 text-white'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
+                statusFilter === s.value ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
               }`}>
-              {tab.label}
+              {s.label}
             </button>
           ))}
         </div>

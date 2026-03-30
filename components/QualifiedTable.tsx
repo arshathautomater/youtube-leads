@@ -8,7 +8,11 @@ const COUNTRY_FLAG: Record<string, string> = { US: '🇺🇸', GB: '🇬🇧', A
 
 const OUTREACH_STATUSES: { value: OutreachStatus; label: string; color: string }[] = [
   { value: 'new', label: 'New', color: 'bg-neutral-700 text-neutral-200' },
-  { value: 'contacted', label: 'Contacted', color: 'bg-blue-900/60 text-blue-300' },
+  { value: 'contacted_x', label: 'Contacted in X', color: 'bg-sky-900/60 text-sky-300' },
+  { value: 'contacted_instagram', label: 'Contacted Instagram', color: 'bg-pink-900/60 text-pink-300' },
+  { value: 'contacted_skool', label: 'Contacted in Skool', color: 'bg-purple-900/60 text-purple-300' },
+  { value: 'contacted_email', label: 'Contacted in Email', color: 'bg-blue-900/60 text-blue-300' },
+  { value: 'follow_up_sent', label: 'Follow Up Sent', color: 'bg-orange-900/60 text-orange-300' },
   { value: 'replied', label: 'Replied', color: 'bg-yellow-900/60 text-yellow-300' },
   { value: 'deal', label: 'Deal', color: 'bg-green-900/60 text-green-300' },
   { value: 'pass', label: 'Pass', color: 'bg-neutral-800 text-neutral-500' },
