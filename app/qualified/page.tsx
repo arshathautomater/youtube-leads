@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Star, ArrowLeft, Download } from 'lucide-react';
+import { Star, ArrowLeft, Download, Plus } from 'lucide-react';
 import Link from 'next/link';
 import QualifiedTable from '@/components/QualifiedTable';
+import AddLeadModal from '@/components/AddLeadModal';
 import type { QualifiedChannel, OutreachStatus } from '@/lib/types';
 
 function exportCsv(channels: QualifiedChannel[]) {
@@ -47,6 +48,7 @@ export default function QualifiedPage() {
   const [channels, setChannels] = useState<QualifiedChannel[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     fetch('/api/qualified')
@@ -101,14 +103,23 @@ export default function QualifiedPage() {
             Channels you've qualified for outreach. Track your pitch pipeline here.
           </p>
         </div>
-        <button
-          onClick={() => exportCsv(filtered)}
-          disabled={filtered.length === 0}
-          className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Export CSV
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-yellow-600 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-500 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Lead
+          </button>
+          <button
+            onClick={() => exportCsv(filtered)}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -155,6 +166,13 @@ export default function QualifiedPage() {
           channels={filtered}
           onStatusChange={handleStatusChange}
           onRemove={handleRemove}
+        />
+      )}
+
+      {showAddModal && (
+        <AddLeadModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={(ch) => setChannels((prev) => [ch, ...prev])}
         />
       )}
     </main>
