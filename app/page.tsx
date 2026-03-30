@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Youtube, AlertCircle, Star, BarChart3 } from 'lucide-react';
+import { Youtube, AlertCircle, Star, BarChart3, Telescope, Plus } from 'lucide-react';
 import Link from 'next/link';
 import SearchForm from '@/components/SearchForm';
 import FilterBar from '@/components/FilterBar';
 import VideoTable from '@/components/VideoTable';
-import type { Video, PitchStatus } from '@/lib/types';
+import AddLeadModal from '@/components/AddLeadModal';
+import FindSimilarModal from '@/components/FindSimilarModal';
+import type { Video, PitchStatus, QualifiedChannel } from '@/lib/types';
 
 function isWithinDate(publishedAt: string, filter: string): boolean {
   if (filter === 'any') return true;
@@ -29,6 +31,8 @@ export default function Home() {
   const [hasSearched, setHasSearched] = useState(false);
   const [qualifiedIds, setQualifiedIds] = useState<Set<string>>(new Set());
   const [qualifiedCount, setQualifiedCount] = useState(0);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showSimilarModal, setShowSimilarModal] = useState(false);
 
   useEffect(() => {
     fetch('/api/qualified')
@@ -130,14 +134,26 @@ export default function Home() {
             Find videos from US 🇺🇸 UK 🇬🇧 AU 🇦🇺 channels to pitch your editing service.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Link href="/dashboard"
-            className="flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors">
+            className="flex items-center gap-2 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors">
             <BarChart3 className="h-4 w-4" />
             Dashboard
           </Link>
+          <button
+            onClick={() => setShowSimilarModal(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors">
+            <Telescope className="h-4 w-4" />
+            Find Similar
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-yellow-600 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-500 transition-colors">
+            <Plus className="h-4 w-4" />
+            Add Lead
+          </button>
           <Link href="/qualified"
-            className="flex items-center gap-2 rounded-xl border border-yellow-700/50 bg-yellow-950/30 px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-950/50 transition-colors">
+            className="flex items-center gap-2 rounded-xl border border-yellow-700/50 bg-yellow-950/30 px-3 py-2 text-sm text-yellow-400 hover:bg-yellow-950/50 transition-colors">
             <Star className="h-4 w-4" />
             Qualified Leads
             {qualifiedCount > 0 && (
@@ -199,6 +215,27 @@ export default function Home() {
           </div>
           <p className="text-neutral-500 text-sm">Select keywords above and hit Search to find videos.</p>
         </div>
+      )}
+
+      {showAddModal && (
+        <AddLeadModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={(ch: QualifiedChannel) => {
+            setQualifiedIds((prev) => new Set([...prev, ch.channel_id]));
+            setQualifiedCount((n) => n + 1);
+          }}
+        />
+      )}
+
+      {showSimilarModal && (
+        <FindSimilarModal
+          onClose={() => setShowSimilarModal(false)}
+          existingIds={qualifiedIds}
+          onAdd={(ch: QualifiedChannel) => {
+            setQualifiedIds((prev) => new Set([...prev, ch.channel_id]));
+            setQualifiedCount((n) => n + 1);
+          }}
+        />
       )}
     </main>
   );
