@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Star, ArrowLeft, Download, Plus, Telescope } from 'lucide-react';
+import { Star, ArrowLeft, Download, Plus, Telescope, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import QualifiedTable from '@/components/QualifiedTable';
 import AddLeadModal from '@/components/AddLeadModal';
@@ -106,6 +106,13 @@ export default function QualifiedPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Dashboard
+          </Link>
           <button
             onClick={() => setShowSimilarModal(true)}
             className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors"
