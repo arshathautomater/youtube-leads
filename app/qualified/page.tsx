@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Star, ArrowLeft, Download, Plus } from 'lucide-react';
+import { Star, ArrowLeft, Download, Plus, Telescope } from 'lucide-react';
 import Link from 'next/link';
 import QualifiedTable from '@/components/QualifiedTable';
 import AddLeadModal from '@/components/AddLeadModal';
+import FindSimilarModal from '@/components/FindSimilarModal';
 import type { QualifiedChannel, OutreachStatus } from '@/lib/types';
 
 function exportCsv(channels: QualifiedChannel[]) {
@@ -49,6 +50,7 @@ export default function QualifiedPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSimilarModal, setShowSimilarModal] = useState(false);
 
   useEffect(() => {
     fetch('/api/qualified')
@@ -103,7 +105,14 @@ export default function QualifiedPage() {
             Channels you've qualified for outreach. Track your pitch pipeline here.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setShowSimilarModal(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors"
+          >
+            <Telescope className="h-3.5 w-3.5" />
+            Find Similar
+          </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 rounded-xl bg-yellow-600 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-500 transition-colors"
@@ -172,6 +181,14 @@ export default function QualifiedPage() {
       {showAddModal && (
         <AddLeadModal
           onClose={() => setShowAddModal(false)}
+          onAdd={(ch) => setChannels((prev) => [ch, ...prev])}
+        />
+      )}
+
+      {showSimilarModal && (
+        <FindSimilarModal
+          onClose={() => setShowSimilarModal(false)}
+          existingIds={new Set(channels.map((c) => c.channel_id))}
           onAdd={(ch) => setChannels((prev) => [ch, ...prev])}
         />
       )}
