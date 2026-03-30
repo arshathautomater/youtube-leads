@@ -15,6 +15,7 @@ export interface QualifiedChannel {
   outreach_status: OutreachStatus;
   notes: string;
   qualified_at: string;
+  contacted_at: string;
   updated_at: string;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Trash2 } from 'lucide-react';
+import { Mail, Trash2, Bell } from 'lucide-react';
 import type { QualifiedChannel, OutreachStatus } from '@/lib/types';
 
 const COUNTRY_FLAG: Record<string, string> = { US: '🇺🇸', GB: '🇬🇧', AU: '🇦🇺' };
@@ -18,10 +18,41 @@ const OUTREACH_STATUSES: { value: OutreachStatus; label: string; color: string }
   { value: 'pass', label: 'Pass', color: 'bg-neutral-800 text-neutral-500' },
 ];
 
+const CONTACTED_STATUSES = new Set(['contacted_x', 'contacted_instagram', 'contacted_skool', 'contacted_email']);
+
 function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
   return String(n);
+}
+
+function FollowUpBadge({ contactedAt }: { contactedAt: string }) {
+  if (!contactedAt) return null;
+  const daysSince = Math.floor((Date.now() - new Date(contactedAt).getTime()) / 86_400_000);
+  const daysLeft = 3 - daysSince;
+  if (daysLeft > 3 || daysLeft < -30) return null; // don't show if too far in future or very old
+  if (daysLeft > 0) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-orange-400 mt-1">
+        <Bell className="h-2.5 w-2.5" />
+        Follow up in {daysLeft}d
+      </span>
+    );
+  }
+  if (daysLeft === 0) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-yellow-400 mt-1 font-medium">
+        <Bell className="h-2.5 w-2.5" />
+        Follow up today!
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 text-[10px] text-red-400 mt-1 font-medium">
+      <Bell className="h-2.5 w-2.5" />
+      Overdue by {Math.abs(daysLeft)}d
+    </span>
+  );
 }
 
 interface Props {
@@ -139,6 +170,9 @@ export default function QualifiedTable({ channels, onStatusChange, onRemove }: P
                       </option>
                     ))}
                   </select>
+                  {CONTACTED_STATUSES.has(ch.outreach_status) && (
+                    <FollowUpBadge contactedAt={ch.contacted_at} />
+                  )}
                 </td>
 
                 {/* Remove */}

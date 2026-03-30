@@ -88,6 +88,7 @@ export async function initSchema(): Promise<void> {
     `ALTER TABLE videos ADD COLUMN instagram_url TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE videos ADD COLUMN channel_thumbnail_url TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE qualified_channels ADD COLUMN channel_thumbnail_url TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE qualified_channels ADD COLUMN contacted_at TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try { await c.execute(sql); } catch { /* column already exists */ }
@@ -229,6 +230,7 @@ function parseQualifiedRow(row: any): QualifiedChannel {
     outreach_status: row.outreach_status as OutreachStatus,
     notes: row.notes,
     qualified_at: row.qualified_at,
+    contacted_at: row.contacted_at ?? '',
     updated_at: row.updated_at,
   };
 }
@@ -282,7 +284,14 @@ export async function updateQualifiedChannel(channelId: string, patch: { outreac
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const args: Record<string, any> = { channel_id: channelId };
 
-  if (patch.outreach_status !== undefined) { fields.push('outreach_status = :outreach_status'); args.outreach_status = patch.outreach_status; }
+  const CONTACTED_STATUSES = new Set(['contacted_x', 'contacted_instagram', 'contacted_skool', 'contacted_email']);
+  if (patch.outreach_status !== undefined) {
+    fields.push('outreach_status = :outreach_status');
+    args.outreach_status = patch.outreach_status;
+    if (CONTACTED_STATUSES.has(patch.outreach_status)) {
+      fields.push("contacted_at = datetime('now')");
+    }
+  }
   if (patch.notes !== undefined) { fields.push('notes = :notes'); args.notes = patch.notes; }
   if (fields.length === 0) return null;
   fields.push("updated_at = datetime('now')");
