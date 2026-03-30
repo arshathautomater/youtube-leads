@@ -35,11 +35,6 @@ export default function QualifiedTable({ channels, onStatusChange, onRemove }: P
     setSavingId(null);
   }
 
-  function cycleStatus(current: OutreachStatus): OutreachStatus {
-    const idx = OUTREACH_STATUSES.findIndex((s) => s.value === current);
-    return OUTREACH_STATUSES[(idx + 1) % OUTREACH_STATUSES.length].value;
-  }
-
   if (channels.length === 0) {
     return (
       <div className="py-16 text-center text-neutral-500 text-sm">
@@ -128,13 +123,18 @@ export default function QualifiedTable({ channels, onStatusChange, onRemove }: P
 
                 {/* Status */}
                 <td className="px-3 py-3">
-                  <button
-                    onClick={() => handleStatusChange(ch.channel_id, cycleStatus(ch.outreach_status))}
+                  <select
+                    value={ch.outreach_status}
+                    onChange={(e) => handleStatusChange(ch.channel_id, e.target.value as OutreachStatus)}
                     disabled={savingId === ch.channel_id}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-opacity ${statusDef.color} ${savingId === ch.channel_id ? 'opacity-50' : 'hover:opacity-80'}`}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 outline-none cursor-pointer appearance-none transition-opacity ${statusDef.color} ${savingId === ch.channel_id ? 'opacity-50' : ''}`}
                   >
-                    {statusDef.label}
-                  </button>
+                    {OUTREACH_STATUSES.map((s) => (
+                      <option key={s.value} value={s.value} className="bg-neutral-900 text-neutral-100">
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
                 </td>
 
                 {/* Remove */}
