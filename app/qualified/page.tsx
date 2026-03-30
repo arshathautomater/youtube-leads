@@ -48,7 +48,7 @@ const ALL_STATUSES = [
 export default function QualifiedPage() {
   const [channels, setChannels] = useState<QualifiedChannel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('new');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSimilarModal, setShowSimilarModal] = useState(false);
 
@@ -80,7 +80,7 @@ export default function QualifiedPage() {
     }
   }, []);
 
-  const filtered = statusFilter === 'all' ? channels : channels.filter((ch) => ch.outreach_status === statusFilter);
+  const filtered = channels.filter((ch) => ch.outreach_status === statusFilter);
 
   const countsByStatus = ALL_STATUSES.reduce<Record<string, number>>((acc, s) => {
     acc[s.value] = channels.filter((ch) => ch.outreach_status === s.value).length;
@@ -148,12 +148,6 @@ export default function QualifiedPage() {
       {/* Filter tabs */}
       {channels.length > 0 && (
         <div className="flex gap-1 flex-wrap">
-          <button onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === 'all' ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
-            }`}>
-            All
-          </button>
           {ALL_STATUSES.map((s) => (
             <button key={s.value} onClick={() => setStatusFilter(s.value)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
