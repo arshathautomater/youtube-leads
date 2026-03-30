@@ -89,6 +89,7 @@ export async function initSchema(): Promise<void> {
     `ALTER TABLE videos ADD COLUMN channel_thumbnail_url TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE qualified_channels ADD COLUMN channel_thumbnail_url TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE qualified_channels ADD COLUMN contacted_at TEXT NOT NULL DEFAULT ''`,
+    `UPDATE qualified_channels SET contacted_at = datetime('now') WHERE outreach_status IN ('contacted_x','contacted_instagram','contacted_skool','contacted_email') AND contacted_at = ''`,
   ];
   for (const sql of migrations) {
     try { await c.execute(sql); } catch { /* column already exists */ }
