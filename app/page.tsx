@@ -135,9 +135,7 @@ export default function Home() {
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-red-600 p-2.5">
-              <Youtube className="h-6 w-6 text-white" />
-            </div>
+            <img src="/logo.jpg" alt="Logo" className="h-11 w-11 rounded-xl object-cover" />
             <h1 className="text-2xl font-bold tracking-tight text-white">YouTube Lead Finder</h1>
           </div>
           <p className="text-sm text-neutral-400">

@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "YouTube Lead Finder",
   description: "Discover AI educational YouTube channels to pitch your editing service",
+  icons: { icon: '/logo.jpg' },
 };
 
 export default function RootLayout({
