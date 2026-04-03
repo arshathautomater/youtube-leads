@@ -138,6 +138,7 @@ export default function Home() {
   }, []);
 
   const filtered = videos.filter((v) => {
+    if (qualifiedIds.has(v.channel_id)) return false;
     if (status !== 'all' && v.pitch_status !== status) return false;
     if (!isWithinDate(v.published_at, dateFilter)) return false;
     if (v.channel_subscribers > 0 && v.channel_subscribers < minSubs) return false;
