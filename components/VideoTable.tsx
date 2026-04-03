@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, ChevronUp, ChevronDown, Youtube, Mail, Star } from 'lucide-react';
+import { ExternalLink, ChevronUp, ChevronDown, Youtube, Mail, Star, Ban } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import type { Video, PitchStatus } from '@/lib/types';
 
@@ -26,9 +26,11 @@ interface Props {
   onNotesChange: (id: string, notes: string) => void;
   qualifiedIds: Set<string>;
   onQualify: (v: Video) => void;
+  disqualifiedIds: Set<string>;
+  onDisqualify: (channelId: string, undo?: boolean) => void;
 }
 
-export default function VideoTable({ videos, onStatusChange, onNotesChange, qualifiedIds, onQualify }: Props) {
+export default function VideoTable({ videos, onStatusChange, onNotesChange, qualifiedIds, onQualify, disqualifiedIds, onDisqualify }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('view_count');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -96,8 +98,10 @@ export default function VideoTable({ videos, onStatusChange, onNotesChange, qual
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-800/60">
-          {sorted.map((v) => (
-            <tr key={v.id} className="hover:bg-neutral-900/50 transition-colors group">
+          {sorted.map((v) => {
+            const isDisqualified = disqualifiedIds.has(v.channel_id);
+            return (
+            <tr key={v.id} className={`hover:bg-neutral-900/50 transition-colors group ${isDisqualified ? 'opacity-40' : ''}`}>
               {/* Thumbnail */}
               <td className="px-3 py-3">
                 <a href={v.video_url} target="_blank" rel="noopener noreferrer" className="block relative">
@@ -206,25 +210,45 @@ export default function VideoTable({ videos, onStatusChange, onNotesChange, qual
                 />
               </td>
 
-              {/* Qualify */}
+              {/* Qualify / Disqualify */}
               <td className="px-3 py-3">
-                {qualifiedIds.has(v.channel_id) ? (
-                  <span className="flex items-center gap-1 text-xs text-yellow-400 font-medium">
-                    <Star className="h-3 w-3 fill-yellow-400" />
-                    Qualified
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => onQualify(v)}
-                    className="flex items-center gap-1 text-xs text-neutral-500 hover:text-yellow-400 transition-colors whitespace-nowrap"
-                  >
-                    <Star className="h-3 w-3" />
-                    Qualify
-                  </button>
-                )}
+                <div className="flex flex-col gap-1.5">
+                  {isDisqualified ? (
+                    <>
+                      <span className="flex items-center gap-1 text-xs text-neutral-500 font-medium">
+                        <Ban className="h-3 w-3" />
+                        Researched
+                      </span>
+                      <button
+                        onClick={() => onDisqualify(v.channel_id, true)}
+                        className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                      >
+                        Undo
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => onQualify(v)}
+                        className="flex items-center gap-1 text-xs text-neutral-500 hover:text-yellow-400 transition-colors whitespace-nowrap"
+                      >
+                        <Star className="h-3 w-3" />
+                        Qualify
+                      </button>
+                      <button
+                        onClick={() => onDisqualify(v.channel_id)}
+                        className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-400 transition-colors whitespace-nowrap"
+                      >
+                        <Ban className="h-3 w-3" />
+                        Skip
+                      </button>
+                    </>
+                  )}
+                </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -81,6 +81,13 @@ export async function initSchema(): Promise<void> {
     },
   ], 'write');
 
+    {
+      sql: `CREATE TABLE IF NOT EXISTS disqualified_channels (
+        channel_id     TEXT PRIMARY KEY,
+        disqualified_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+      args: [],
+    },
   // Migrations for any older schema
   const migrations = [
     `ALTER TABLE videos ADD COLUMN contact_email TEXT NOT NULL DEFAULT ''`,
@@ -317,4 +324,24 @@ export async function isChannelQualified(channelId: string): Promise<boolean> {
   await ensureSchema();
   const result = await getClient().execute({ sql: `SELECT 1 FROM qualified_channels WHERE channel_id = ?`, args: [channelId] });
   return result.rows.length > 0;
+}
+
+// Disqualified Channels
+export async function getDisqualifiedChannelIds(): Promise<string[]> {
+  await ensureSchema();
+  const result = await getClient().execute(`SELECT channel_id FROM disqualified_channels`);
+  return result.rows.map((r) => r.channel_id as string);
+}
+
+export async function disqualifyChannel(channelId: string): Promise<void> {
+  await ensureSchema();
+  await getClient().execute({
+    sql: `INSERT OR IGNORE INTO disqualified_channels (channel_id) VALUES (?)`,
+    args: [channelId],
+  });
+}
+
+export async function undisqualifyChannel(channelId: string): Promise<void> {
+  await ensureSchema();
+  await getClient().execute({ sql: `DELETE FROM disqualified_channels WHERE channel_id = ?`, args: [channelId] });
 }

@@ -34,6 +34,7 @@ export default function Home() {
   const [followUpToday, setFollowUpToday] = useState<QualifiedChannel[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSimilarModal, setShowSimilarModal] = useState(false);
+  const [disqualifiedIds, setDisqualifiedIds] = useState<Set<string>>(new Set());
 
   const [markingAll, setMarkingAll] = useState(false);
   const CONTACTED_STATUSES = new Set(['contacted_x', 'contacted_instagram', 'contacted_skool', 'contacted_email']);
@@ -53,6 +54,9 @@ export default function Home() {
         });
         setFollowUpToday(due);
       });
+    fetch('/api/disqualified')
+      .then((r) => r.json())
+      .then((d) => setDisqualifiedIds(new Set<string>(d.ids ?? [])));
   }, []);
 
   async function handleMarkAllFollowedUp() {
@@ -135,6 +139,20 @@ export default function Home() {
       setQualifiedIds((prev) => new Set([...prev, v.channel_id]));
       setQualifiedCount((n) => n + 1);
     }
+  }, []);
+
+  const handleDisqualify = useCallback(async (channelId: string, undo = false) => {
+    const method = undo ? 'DELETE' : 'POST';
+    await fetch('/api/disqualified', {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: channelId }),
+    });
+    setDisqualifiedIds((prev) => {
+      const next = new Set(prev);
+      undo ? next.delete(channelId) : next.add(channelId);
+      return next;
+    });
   }, []);
 
   const filtered = videos.filter((v) => {
@@ -266,6 +284,8 @@ export default function Home() {
             onNotesChange={handleNotesChange}
             qualifiedIds={qualifiedIds}
             onQualify={handleQualify}
+            disqualifiedIds={disqualifiedIds}
+            onDisqualify={handleDisqualify}
           />
         </>
       )}
