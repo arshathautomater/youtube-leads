@@ -60,7 +60,10 @@ export default function SearchForm({ onSearch, loading }: Props) {
     if (e.key === 'Enter') addKeyword();
   }
 
-  const activeTexts = keywords.filter((k) => selected.has(k.id)).map((k) => k.text);
+  const savedTexts = keywords.filter((k) => selected.has(k.id)).map((k) => k.text);
+  const activeTexts = custom.trim()
+    ? [...new Set([...savedTexts, custom.trim()])]
+    : savedTexts;
 
   return (
     <div className="flex flex-col gap-4">
@@ -102,7 +105,7 @@ export default function SearchForm({ onSearch, loading }: Props) {
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Add keyword (press Enter to save)…"
+            placeholder="Type keyword and Search, or press Enter to save…"
             className="flex-1 bg-transparent text-sm text-neutral-100 placeholder-neutral-600 outline-none"
           />
           {custom && (
