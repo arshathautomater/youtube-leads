@@ -46,7 +46,7 @@ export default function Home() {
         const channels: QualifiedChannel[] = d.channels ?? [];
         const ids = new Set<string>(channels.map((c) => c.channel_id));
         setQualifiedIds(ids);
-        setQualifiedCount(ids.size);
+        setQualifiedCount(channels.filter((c) => c.outreach_status === 'new').length);
         const due = channels.filter((c) => {
           if (!c.contacted_at || !CONTACTED_STATUSES.has(c.outreach_status)) return false;
           const daysSince = Math.floor((Date.now() - new Date(c.contacted_at).getTime()) / 86_400_000);
