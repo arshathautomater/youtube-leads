@@ -73,6 +73,18 @@ export default function QualifiedPage() {
     }
   }, []);
 
+  const handleUpdateContact = useCallback(async (channelId: string, field: 'twitter_url' | 'instagram_url' | 'contact_email', value: string) => {
+    const res = await fetch(`/api/qualified/${channelId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setChannels((prev) => prev.map((ch) => ch.channel_id === channelId ? data.channel : ch));
+    }
+  }, []);
+
   const handleRemove = useCallback(async (channelId: string) => {
     const res = await fetch(`/api/qualified/${channelId}`, { method: 'DELETE' });
     if (res.ok) {
@@ -175,6 +187,7 @@ export default function QualifiedPage() {
         <QualifiedTable
           channels={filtered}
           onStatusChange={handleStatusChange}
+          onUpdateContact={handleUpdateContact}
           onRemove={handleRemove}
         />
       )}

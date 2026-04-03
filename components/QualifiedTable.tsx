@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Trash2, Bell } from 'lucide-react';
+import { Mail, Trash2, Bell, X } from 'lucide-react';
 import type { QualifiedChannel, OutreachStatus } from '@/lib/types';
 
 const COUNTRY_FLAG: Record<string, string> = { US: '🇺🇸', GB: '🇬🇧', AU: '🇦🇺' };
@@ -19,6 +19,12 @@ const OUTREACH_STATUSES: { value: OutreachStatus; label: string; color: string }
 ];
 
 const CONTACTED_STATUSES = new Set(['contacted_x', 'contacted_instagram', 'contacted_skool', 'contacted_email']);
+
+const STATUS_SOCIAL_MAP: Record<string, { field: 'twitter_url' | 'instagram_url' | 'contact_email'; label: string; placeholder: string }> = {
+  contacted_x:         { field: 'twitter_url',    label: 'Their X / Twitter URL',   placeholder: 'https://x.com/username' },
+  contacted_instagram: { field: 'instagram_url',  label: 'Their Instagram URL',      placeholder: 'https://instagram.com/username' },
+  contacted_email:     { field: 'contact_email',  label: 'Their email address',      placeholder: 'name@example.com' },
+};
 
 function formatNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -58,17 +64,51 @@ function FollowUpBadge({ contactedAt }: { contactedAt: string }) {
 interface Props {
   channels: QualifiedChannel[];
   onStatusChange: (channelId: string, status: OutreachStatus) => void;
+  onUpdateContact: (channelId: string, field: 'twitter_url' | 'instagram_url' | 'contact_email', value: string) => void;
   onRemove: (channelId: string) => void;
 }
 
-export default function QualifiedTable({ channels, onStatusChange, onRemove }: Props) {
+type Prompt = { channelId: string; status: OutreachStatus; field: 'twitter_url' | 'instagram_url' | 'contact_email'; label: string; placeholder: string };
+
+export default function QualifiedTable({ channels, onStatusChange, onUpdateContact, onRemove }: Props) {
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [promptValue, setPromptValue] = useState('');
 
   async function handleStatusChange(channelId: string, status: OutreachStatus) {
+    const socialMap = STATUS_SOCIAL_MAP[status];
+    if (socialMap) {
+      const ch = channels.find((c) => c.channel_id === channelId);
+      const hasSocial = ch?.[socialMap.field];
+      if (!hasSocial) {
+        setPrompt({ channelId, status, ...socialMap });
+        setPromptValue('');
+        return;
+      }
+    }
     setSavingId(channelId);
     await onStatusChange(channelId, status);
     setSavingId(null);
   }
+
+  async function handlePromptSave() {
+    if (!prompt) return;
+    setSavingId(prompt.channelId);
+    if (promptValue.trim()) await onUpdateContact(prompt.channelId, prompt.field, promptValue.trim());
+    await onStatusChange(prompt.channelId, prompt.status);
+    setSavingId(null);
+    setPrompt(null);
+  }
+
+  async function handlePromptSkip() {
+    if (!prompt) return;
+    setSavingId(prompt.channelId);
+    await onStatusChange(prompt.channelId, prompt.status);
+    setSavingId(null);
+    setPrompt(null);
+  }
+
+  const channel = prompt ? channels.find((c) => c.channel_id === prompt.channelId) : null;
 
   if (channels.length === 0) {
     return (
@@ -79,6 +119,43 @@ export default function QualifiedTable({ channels, onStatusChange, onRemove }: P
   }
 
   return (
+    <>
+    {prompt && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="w-full max-w-sm bg-neutral-900 border border-neutral-700 rounded-2xl p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-white text-sm">Add contact info</p>
+            <button onClick={() => setPrompt(null)} className="text-neutral-500 hover:text-white"><X className="h-4 w-4" /></button>
+          </div>
+          {channel && (
+            <div className="flex items-center gap-2">
+              {channel.channel_thumbnail_url && <img src={channel.channel_thumbnail_url} className="h-7 w-7 rounded-full" />}
+              <span className="text-sm text-neutral-300">{channel.channel_name}</span>
+            </div>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-neutral-400">{prompt.label}</label>
+            <input
+              autoFocus
+              type="text"
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handlePromptSave()}
+              placeholder={prompt.placeholder}
+              className="w-full rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-600 outline-none focus:border-neutral-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handlePromptSave} className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-sm font-medium text-white transition-colors">
+              Save & Continue
+            </button>
+            <button onClick={handlePromptSkip} className="rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors">
+              Skip
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="overflow-x-auto rounded-xl border border-neutral-800">
       <table className="w-full text-sm">
         <thead>
@@ -191,5 +268,6 @@ export default function QualifiedTable({ channels, onStatusChange, onRemove }: P
         </tbody>
       </table>
     </div>
+    </>
   );
 }

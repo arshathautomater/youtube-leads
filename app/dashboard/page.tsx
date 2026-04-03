@@ -60,13 +60,24 @@ function DrillDownModal({ title, channels, onClose }: {
                     <p className="text-sm font-medium text-neutral-100 truncate">{ch.channel_name}</p>
                     <p className="text-xs text-neutral-500 truncate">{ch.channel_handle || ch.channel_url}</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                     {ch.channel_subscribers > 0 && (
                       <span className="text-xs text-neutral-500">{formatNum(ch.channel_subscribers)}</span>
                     )}
-                    <a href={ch.channel_url} target="_blank" rel="noopener noreferrer" className="text-neutral-600 hover:text-neutral-300 transition-colors">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+                    <div className="flex items-center gap-2">
+                      {ch.contact_email && (
+                        <a href={`mailto:${ch.contact_email}`} className="text-xs text-blue-400 hover:text-blue-300" title={ch.contact_email}>✉</a>
+                      )}
+                      {ch.twitter_url && (
+                        <a href={ch.twitter_url} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 hover:text-sky-300 font-bold">𝕏</a>
+                      )}
+                      {ch.instagram_url && (
+                        <a href={ch.instagram_url} target="_blank" rel="noopener noreferrer" className="text-xs text-pink-400 hover:text-pink-300">📷</a>
+                      )}
+                      <a href={ch.channel_url} target="_blank" rel="noopener noreferrer" className="text-neutral-600 hover:text-neutral-300 transition-colors">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
                   </div>
                 </li>
               ))}
