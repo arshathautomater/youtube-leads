@@ -35,6 +35,7 @@ export default function Home() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSimilarModal, setShowSimilarModal] = useState(false);
 
+  const [markingAll, setMarkingAll] = useState(false);
   const CONTACTED_STATUSES = new Set(['contacted_x', 'contacted_instagram', 'contacted_skool', 'contacted_email']);
 
   useEffect(() => {
@@ -53,6 +54,21 @@ export default function Home() {
         setFollowUpToday(due);
       });
   }, []);
+
+  async function handleMarkAllFollowedUp() {
+    setMarkingAll(true);
+    await Promise.all(
+      followUpToday.map((ch) =>
+        fetch(`/api/qualified/${ch.channel_id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ outreach_status: 'follow_up_sent' }),
+        })
+      )
+    );
+    setFollowUpToday([]);
+    setMarkingAll(false);
+  }
 
   async function handleSearch(keywords: string[]) {
     setLoading(true);
@@ -174,11 +190,19 @@ export default function Home() {
       {/* Follow-up reminders */}
       {followUpToday.length > 0 && (
         <div className="rounded-xl border border-orange-800/60 bg-orange-950/30 p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4 text-orange-400" />
-            <span className="text-sm font-semibold text-orange-300">
-              Follow up today — {followUpToday.length} channel{followUpToday.length !== 1 ? 's' : ''}
-            </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-orange-400" />
+              <span className="text-sm font-semibold text-orange-300">
+                Follow up today — {followUpToday.length} channel{followUpToday.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <button
+              onClick={handleMarkAllFollowedUp}
+              disabled={markingAll}
+              className="rounded-lg bg-orange-700/60 hover:bg-orange-700 disabled:opacity-50 px-3 py-1 text-xs font-medium text-orange-100 transition-colors shrink-0">
+              {markingAll ? 'Marking…' : 'All done ✓'}
+            </button>
           </div>
           <div className="flex flex-wrap gap-2">
             {followUpToday.map((ch) => {
