@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getQualifiedChannels, qualifyChannel } from '@/lib/db';
+import { getQualifiedChannels, qualifyChannel, updateQualifiedChannel } from '@/lib/db';
+import { scrapeChannelContacts } from '@/lib/youtube';
 
 export async function GET() {
   const channels = await getQualifiedChannels();
@@ -23,5 +24,19 @@ export async function POST(req: Request) {
     twitter_url: twitter_url ?? '',
     instagram_url: instagram_url ?? '',
   });
-  return NextResponse.json({ channel });
+
+  // Scrape About page + link-in-bio for contact info, filling any gaps
+  const scraped = await scrapeChannelContacts(channel_id, channel_handle ?? '');
+  const updatedContacts = {
+    contact_email: contact_email || scraped.contact_email || undefined,
+    twitter_url: twitter_url || scraped.twitter_url || undefined,
+    instagram_url: instagram_url || scraped.instagram_url || undefined,
+  };
+  if (updatedContacts.contact_email || updatedContacts.twitter_url || updatedContacts.instagram_url) {
+    await updateQualifiedChannel(channel_id, updatedContacts);
+  }
+
+  // Return enriched channel
+  const enriched = { ...channel, ...updatedContacts };
+  return NextResponse.json({ channel: enriched });
 }

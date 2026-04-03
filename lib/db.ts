@@ -278,7 +278,7 @@ export async function qualifyChannel(v: Pick<Video, 'channel_id' | 'channel_name
   return parseQualifiedRow(result.rows[0] as any);
 }
 
-export async function updateQualifiedChannel(channelId: string, patch: { outreach_status?: OutreachStatus; notes?: string; contacted_at?: string }): Promise<QualifiedChannel | null> {
+export async function updateQualifiedChannel(channelId: string, patch: { outreach_status?: OutreachStatus; notes?: string; contacted_at?: string; contact_email?: string; twitter_url?: string; instagram_url?: string }): Promise<QualifiedChannel | null> {
   await ensureSchema();
   const c = getClient();
   const fields: string[] = [];
@@ -295,6 +295,9 @@ export async function updateQualifiedChannel(channelId: string, patch: { outreac
   }
   if (patch.notes !== undefined) { fields.push('notes = :notes'); args.notes = patch.notes; }
   if (patch.contacted_at !== undefined) { fields.push('contacted_at = :contacted_at'); args.contacted_at = patch.contacted_at; }
+  if (patch.contact_email !== undefined) { fields.push('contact_email = :contact_email'); args.contact_email = patch.contact_email; }
+  if (patch.twitter_url !== undefined) { fields.push('twitter_url = :twitter_url'); args.twitter_url = patch.twitter_url; }
+  if (patch.instagram_url !== undefined) { fields.push('instagram_url = :instagram_url'); args.instagram_url = patch.instagram_url; }
   if (fields.length === 0) return null;
   fields.push("updated_at = datetime('now')");
 

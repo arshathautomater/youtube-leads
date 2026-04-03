@@ -38,7 +38,6 @@ interface YTChannelItem {
 }
 
 function extractEmail(text: string): string {
-  // Exclude common false positives (image extensions, YouTube domains, etc.)
   const matches = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) ?? [];
   return matches.find((m) =>
     !m.endsWith('.png') && !m.endsWith('.jpg') &&
@@ -47,16 +46,51 @@ function extractEmail(text: string): string {
   ) ?? '';
 }
 
-// Scrape a YouTube channel's About page to extract social links and email.
-// YouTube encodes external links as /redirect?q=<encoded-url> in the page HTML.
-async function scrapeChannelAbout(channelId: string, handle: string): Promise<{
+function extractSocialFromText(text: string): { twitter_url: string; instagram_url: string; contact_email: string } {
+  const twitterMatch = text.match(/https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/(?!intent|i\/)[A-Za-z0-9_]+/);
+  const igMatch = text.match(/https?:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9_.]+/);
+  return {
+    twitter_url: twitterMatch?.[0] ?? '',
+    instagram_url: igMatch?.[0] ?? '',
+    contact_email: extractEmail(text),
+  };
+}
+
+const LINK_IN_BIO_DOMAINS = [
+  'linktr.ee', 'beacons.ai', 'bio.link', 'allmylinks.com',
+  'linkpop.com', 'stan.store', 'carrd.co', 'koji.to',
+];
+
+async function scrapeLinkInBio(url: string): Promise<{ contact_email: string; twitter_url: string; instagram_url: string }> {
+  const empty = { contact_email: '', twitter_url: '', instagram_url: '' };
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+      },
+    });
+    if (!res.ok) return empty;
+    const html = await res.text();
+    const twitterMatch = html.match(/href="(https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/(?!intent|i\/)[A-Za-z0-9_][^"]*?)"/i);
+    const igMatch = html.match(/href="(https?:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9_.][^"]*?)"/i);
+    return {
+      contact_email: extractEmail(html),
+      twitter_url: twitterMatch?.[1]?.split('?')[0] ?? '',
+      instagram_url: igMatch?.[1]?.split('?')[0] ?? '',
+    };
+  } catch {
+    return empty;
+  }
+}
+
+export async function scrapeChannelContacts(channelId: string, handle: string): Promise<{
   contact_email: string;
   twitter_url: string;
   instagram_url: string;
 }> {
   const empty = { contact_email: '', twitter_url: '', instagram_url: '' };
   try {
-    // Try handle URL first (more reliable), fall back to channel ID URL
     const urls = handle
       ? [`https://www.youtube.com/${handle}/about`, `https://www.youtube.com/channel/${channelId}/about`]
       : [`https://www.youtube.com/channel/${channelId}/about`];
@@ -74,7 +108,7 @@ async function scrapeChannelAbout(channelId: string, handle: string): Promise<{
     }
     if (!html) return empty;
 
-    // Extract all outbound links from YouTube's redirect wrapper
+    // Extract all outbound redirect links from YouTube's redirect wrapper
     const redirects = [...html.matchAll(/\/redirect\?[^"']*?q=([^"'&\s]+)/g)];
     const outboundUrls = redirects.map((m) => {
       try { return decodeURIComponent(m[1]); } catch { return ''; }
@@ -82,20 +116,25 @@ async function scrapeChannelAbout(channelId: string, handle: string): Promise<{
 
     let twitter_url = '';
     let instagram_url = '';
+    let contact_email = extractEmail(html);
+    let linkInBioUrl = '';
 
     for (const url of outboundUrls) {
       const lower = url.toLowerCase();
       if (!twitter_url && (lower.includes('twitter.com/') || lower.includes('x.com/'))) {
-        // Skip x.com/i/ or twitter.com/intent/ links
         if (!lower.includes('/intent/') && !lower.includes('x.com/i/')) twitter_url = url;
       }
-      if (!instagram_url && lower.includes('instagram.com/')) {
-        instagram_url = url;
-      }
+      if (!instagram_url && lower.includes('instagram.com/')) instagram_url = url;
+      if (!linkInBioUrl && LINK_IN_BIO_DOMAINS.some((d) => lower.includes(d))) linkInBioUrl = url;
     }
 
-    // Extract email from the whole page
-    const contact_email = extractEmail(html);
+    // Follow link-in-bio page to find any missing contacts
+    if (linkInBioUrl && (!twitter_url || !instagram_url || !contact_email)) {
+      const bio = await scrapeLinkInBio(linkInBioUrl);
+      if (!twitter_url && bio.twitter_url) twitter_url = bio.twitter_url;
+      if (!instagram_url && bio.instagram_url) instagram_url = bio.instagram_url;
+      if (!contact_email && bio.contact_email) contact_email = bio.contact_email;
+    }
 
     return { contact_email, twitter_url, instagram_url };
   } catch {
@@ -103,69 +142,65 @@ async function scrapeChannelAbout(channelId: string, handle: string): Promise<{
   }
 }
 
-function extractSocialFromText(text: string): { twitter_url: string; instagram_url: string; contact_email: string } {
-  const twitterMatch = text.match(/https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/(?!intent|i\/)[A-Za-z0-9_]+/);
-  const igMatch = text.match(/https?:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9_.]+/);
-  return {
-    twitter_url: twitterMatch?.[0] ?? '',
-    instagram_url: igMatch?.[0] ?? '',
-    contact_email: extractEmail(text),
-  };
-}
-
 export async function searchYouTubeVideos(keywords: string[]): Promise<Video[]> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) throw new Error('YOUTUBE_API_KEY is not configured');
 
-  // Step 1: Search videos per keyword × per region
-  const videoMap = new Map<string, Partial<Video>>();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
-  for (const keyword of keywords) {
+  // Deduplicate by channelId — one video (most recent) per channel, up to 100
+  const channelBestVideo = new Map<string, { videoId: string } & YTSearchItem['snippet']>();
+
+  outer: for (const keyword of keywords) {
     for (const regionCode of TARGET_COUNTRIES) {
-      const url =
-        `${BASE}/search?part=snippet&type=video&q=${encodeURIComponent(keyword)}` +
-        `&maxResults=50&regionCode=${regionCode}&key=${apiKey}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(`YouTube API error ${res.status}: ${JSON.stringify(err)}`);
-      }
-      const data = await res.json() as { items: YTSearchItem[] };
-      for (const item of data.items ?? []) {
-        const id = item.id.videoId;
-        if (id && !videoMap.has(id)) {
-          videoMap.set(id, {
-            id,
-            title: item.snippet.title,
-            description: item.snippet.description,
-            thumbnail_url:
-              item.snippet.thumbnails.medium?.url ??
-              item.snippet.thumbnails.default?.url ?? '',
-            video_url: `https://www.youtube.com/watch?v=${id}`,
-            published_at: item.snippet.publishedAt,
-            channel_id: item.snippet.channelId,
-            channel_name: item.snippet.channelTitle,
-            channel_url: `https://www.youtube.com/channel/${item.snippet.channelId}`,
-          });
+      let pageToken = '';
+      for (let page = 0; page < 2; page++) {
+        const params = new URLSearchParams({
+          part: 'snippet',
+          type: 'video',
+          q: keyword,
+          maxResults: '50',
+          regionCode,
+          publishedAfter: thirtyDaysAgo,
+          order: 'date',
+          key: apiKey,
+        });
+        if (pageToken) params.set('pageToken', pageToken);
+
+        const res = await fetch(`${BASE}/search?${params}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(`YouTube API error ${res.status}: ${JSON.stringify(err)}`);
         }
+        const data = await res.json() as { items: YTSearchItem[]; nextPageToken?: string };
+        pageToken = data.nextPageToken ?? '';
+
+        for (const item of data.items ?? []) {
+          const channelId = item.snippet.channelId;
+          if (!channelBestVideo.has(channelId)) {
+            channelBestVideo.set(channelId, { videoId: item.id.videoId, ...item.snippet });
+          }
+        }
+
+        if (channelBestVideo.size >= 100 || !pageToken) break;
       }
+      if (channelBestVideo.size >= 100) break outer;
     }
   }
 
-  if (videoMap.size === 0) return [];
+  if (channelBestVideo.size === 0) return [];
 
-  // Step 2: Fetch video statistics in batches of 50
-  const videoIds = Array.from(videoMap.keys());
+  // Step 2: Fetch video stats
+  const videoIds = [...channelBestVideo.values()].map((v) => v.videoId);
+  const videoStats = new Map<string, { view_count: number; like_count: number; comment_count: number }>();
+
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
-    const statsUrl = `${BASE}/videos?part=statistics&id=${batch.join(',')}&key=${apiKey}`;
-    const res = await fetch(statsUrl);
+    const res = await fetch(`${BASE}/videos?part=statistics&id=${batch.join(',')}&key=${apiKey}`);
     if (!res.ok) continue;
     const data = await res.json() as { items: YTVideoItem[] };
     for (const item of data.items ?? []) {
-      const existing = videoMap.get(item.id) ?? {};
-      videoMap.set(item.id, {
-        ...existing,
+      videoStats.set(item.id, {
         view_count: Number(item.statistics.viewCount ?? 0),
         like_count: Number(item.statistics.likeCount ?? 0),
         comment_count: Number(item.statistics.commentCount ?? 0),
@@ -173,10 +208,8 @@ export async function searchYouTubeVideos(keywords: string[]): Promise<Video[]> 
     }
   }
 
-  // Step 3: Fetch channel details (country, subscribers, handle)
-  const channelIds = [
-    ...new Set(Array.from(videoMap.values()).map((v) => v.channel_id ?? '').filter(Boolean)),
-  ];
+  // Step 3: Fetch channel details (no About page scraping — deferred to qualify time)
+  const channelIds = [...channelBestVideo.keys()];
   const channelData = new Map<string, {
     country: string; subscribers: number; handle: string; thumbnail_url: string;
     contact_email: string; twitter_url: string; instagram_url: string;
@@ -184,72 +217,48 @@ export async function searchYouTubeVideos(keywords: string[]): Promise<Video[]> 
 
   for (let i = 0; i < channelIds.length; i += 50) {
     const batch = channelIds.slice(i, i + 50);
-    const chUrl = `${BASE}/channels?part=snippet,statistics&id=${batch.join(',')}&key=${apiKey}`;
-    const res = await fetch(chUrl);
+    const res = await fetch(`${BASE}/channels?part=snippet,statistics&id=${batch.join(',')}&key=${apiKey}`);
     if (!res.ok) continue;
     const data = await res.json() as { items: YTChannelItem[] };
     for (const item of data.items ?? []) {
       const handle = item.snippet.customUrl ?? '';
+      const descContacts = extractSocialFromText(item.snippet.description ?? '');
       channelData.set(item.id, {
         country: item.snippet.country ?? '',
         subscribers: Number(item.statistics.subscriberCount ?? 0),
         handle: handle.startsWith('@') ? handle : handle ? `@${handle}` : '',
         thumbnail_url: item.snippet.thumbnails?.medium?.url ?? item.snippet.thumbnails?.default?.url ?? '',
-        contact_email: '',
-        twitter_url: '',
-        instagram_url: '',
+        ...descContacts,
       });
     }
   }
 
-  // Step 4: Filter to target countries first, then scrape About pages in parallel
-  const targetChannelIds = [...channelData.entries()]
-    .filter(([, ch]) => TARGET_COUNTRIES.includes(ch.country))
-    .map(([id]) => id);
-
-  // Scrape about pages in parallel (max 10 at a time to avoid rate limiting)
-  const CONCURRENCY = 10;
-  for (let i = 0; i < targetChannelIds.length; i += CONCURRENCY) {
-    const batch = targetChannelIds.slice(i, i + CONCURRENCY);
-    await Promise.all(batch.map(async (channelId) => {
-      const ch = channelData.get(channelId)!;
-      const contacts = await scrapeChannelAbout(channelId, ch.handle);
-      channelData.set(channelId, { ...ch, ...contacts });
-    }));
-  }
-
-  // Step 5: Merge and return — also try extracting contacts from video description as fallback
-  return Array.from(videoMap.values())
-    .map((v): Video & { _country: string } => {
-      const ch = channelData.get(v.channel_id ?? '') ?? {
-        country: '', subscribers: 0, handle: '', thumbnail_url: '',
-        contact_email: '', twitter_url: '', instagram_url: '',
-      };
-      // Fill any still-missing contact fields from the video's own description
-      const descContacts = extractSocialFromText(v.description ?? '');
-      const contact_email = ch.contact_email || descContacts.contact_email;
-      const twitter_url   = ch.twitter_url   || descContacts.twitter_url;
-      const instagram_url = ch.instagram_url || descContacts.instagram_url;
+  // Step 4: Build results filtered to target countries
+  return [...channelBestVideo.entries()]
+    .map(([channelId, snippet]): (Video & { _country: string }) | null => {
+      const ch = channelData.get(channelId);
+      if (!ch || !TARGET_COUNTRIES.includes(ch.country)) return null;
+      const stats = videoStats.get(snippet.videoId) ?? { view_count: 0, like_count: 0, comment_count: 0 };
       return {
-        id: v.id ?? '',
-        title: v.title ?? '',
-        thumbnail_url: v.thumbnail_url ?? '',
-        video_url: v.video_url ?? '',
-        published_at: v.published_at ?? '',
-        view_count: v.view_count ?? 0,
-        like_count: v.like_count ?? 0,
-        comment_count: v.comment_count ?? 0,
-        description: v.description ?? '',
-        channel_id: v.channel_id ?? '',
-        channel_name: v.channel_name ?? '',
+        id: snippet.videoId,
+        title: snippet.title,
+        thumbnail_url: snippet.thumbnails.medium?.url ?? snippet.thumbnails.default?.url ?? '',
+        video_url: `https://www.youtube.com/watch?v=${snippet.videoId}`,
+        published_at: snippet.publishedAt,
+        view_count: stats.view_count,
+        like_count: stats.like_count,
+        comment_count: stats.comment_count,
+        description: snippet.description,
+        channel_id: channelId,
+        channel_name: snippet.channelTitle,
         channel_handle: ch.handle,
-        channel_url: v.channel_url ?? '',
+        channel_url: ch.handle ? `https://www.youtube.com/${ch.handle}` : `https://www.youtube.com/channel/${channelId}`,
         channel_thumbnail_url: ch.thumbnail_url,
         channel_subscribers: ch.subscribers,
         channel_country: ch.country,
-        contact_email,
-        twitter_url,
-        instagram_url,
+        contact_email: ch.contact_email,
+        twitter_url: ch.twitter_url,
+        instagram_url: ch.instagram_url,
         pitch_status: 'not_pitched',
         notes: '',
         found_at: new Date().toISOString(),
@@ -257,6 +266,6 @@ export async function searchYouTubeVideos(keywords: string[]): Promise<Video[]> 
         _country: ch.country,
       };
     })
-    .filter((v) => TARGET_COUNTRIES.includes(v._country))
+    .filter((v): v is Video & { _country: string } => v !== null)
     .map(({ _country, ...v }) => v);
 }

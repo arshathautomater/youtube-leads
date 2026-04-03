@@ -63,7 +63,7 @@ export default function DashboardPage() {
   const total = channels.length;
   const outreachSent = channels.filter((c) => OUTREACH_STATUSES.has(c.outreach_status)).length;
   const activeOutreach = outreachSent - (counts['pass'] ?? 0);
-  const replied = (counts['replied'] ?? 0) + (counts['deal'] ?? 0);
+  const replied = (counts['replied'] ?? 0) + (counts['deal'] ?? 0) + (counts['pass'] ?? 0);
   const deals = counts['deal'] ?? 0;
   const replyRate = pct(replied, activeOutreach);
   const closeRate = pct(deals, activeOutreach);
