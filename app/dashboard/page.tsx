@@ -62,7 +62,7 @@ export default function DashboardPage() {
 
   const total = channels.length;
   const outreachSent = channels.filter((c) => OUTREACH_STATUSES.has(c.outreach_status)).length;
-  const activeOutreach = outreachSent - (counts['pass'] ?? 0);
+  const activeOutreach = outreachSent;
   const replied = (counts['replied'] ?? 0) + (counts['deal'] ?? 0) + (counts['pass'] ?? 0);
   const deals = counts['deal'] ?? 0;
   const replyRate = pct(replied, activeOutreach);
@@ -95,7 +95,7 @@ export default function DashboardPage() {
           {/* Stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <StatCard icon={Users}         label="Total Qualified"   value={total}           color="bg-neutral-700" />
-            <StatCard icon={Send}          label="Outreach Sent"     value={activeOutreach}  sub="excl. Pass"       color="bg-indigo-600" />
+            <StatCard icon={Send}          label="Outreach Sent"     value={activeOutreach}                         color="bg-indigo-600" />
             <StatCard icon={TrendingUp}    label="Follow-ups Sent"   value={counts['follow_up_sent'] ?? 0}          color="bg-orange-600" />
             <StatCard icon={MessageCircle} label="Replies Received"  value={replied}         sub={`Reply rate: ${replyRate}`}  color="bg-yellow-600" />
             <StatCard icon={Handshake}     label="Deals Closed"      value={deals}           sub={`Close rate: ${closeRate}`}  color="bg-green-600" />
