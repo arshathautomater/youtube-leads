@@ -79,15 +79,15 @@ export async function initSchema(): Promise<void> {
       )`,
       args: [],
     },
-  ], 'write');
-
     {
       sql: `CREATE TABLE IF NOT EXISTS disqualified_channels (
-        channel_id     TEXT PRIMARY KEY,
+        channel_id      TEXT PRIMARY KEY,
         disqualified_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`,
       args: [],
     },
+  ], 'write');
+
   // Migrations for any older schema
   const migrations = [
     `ALTER TABLE videos ADD COLUMN contact_email TEXT NOT NULL DEFAULT ''`,
