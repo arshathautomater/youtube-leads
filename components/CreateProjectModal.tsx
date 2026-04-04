@@ -24,7 +24,7 @@ export default function CreateProjectModal({ clientId, sortOrder, onClose, onCre
   const [title, setTitle] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [stage, setStage] = useState<ProductionStage>('cutting');
-  const [deliveryDate, setDeliveryDate] = useState('');
+  const [deliveryHours, setDeliveryHours] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +37,7 @@ export default function CreateProjectModal({ clientId, sortOrder, onClose, onCre
     const res = await fetch(`/api/clients/${clientId}/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.trim(), thumbnail_url: thumbnailUrl.trim(), stage, delivery_date: deliveryDate, notes: notes.trim(), sort_order: sortOrder }),
+      body: JSON.stringify({ title: title.trim(), thumbnail_url: thumbnailUrl.trim(), stage, delivery_date: deliveryHours.trim(), notes: notes.trim(), sort_order: sortOrder }),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error ?? 'Failed to create project'); setLoading(false); return; }
@@ -72,9 +72,9 @@ export default function CreateProjectModal({ clientId, sortOrder, onClose, onCre
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-neutral-400">Est. delivery</label>
-              <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
-                className="rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-neutral-500" />
+              <label className="text-xs text-neutral-400">Est. hours</label>
+              <input type="number" min="1" value={deliveryHours} onChange={(e) => setDeliveryHours(e.target.value)} placeholder="e.g. 48"
+                className="rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-600 outline-none focus:border-neutral-500" />
             </div>
           </div>
           <div className="flex flex-col gap-1.5">

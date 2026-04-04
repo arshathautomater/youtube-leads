@@ -1,14 +1,9 @@
 'use client';
 
-import { Calendar, Film } from 'lucide-react';
+import { Clock, Film } from 'lucide-react';
 import StageBadge from './StageBadge';
 import StageProgressBar from './StageProgressBar';
 import type { ClientProject } from '@/lib/types';
-
-function formatDate(d: string) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 export default function ClientPortalView({ clientName, projects }: { clientName: string; projects: ClientProject[] }) {
   return (
@@ -50,11 +45,11 @@ export default function ClientPortalView({ clientName, projects }: { clientName:
                 {/* Progress bar */}
                 <StageProgressBar stage={p.stage} />
 
-                {/* Delivery date */}
+                {/* Estimated hours */}
                 {p.delivery_date && (
                   <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-                    <Calendar className="h-3.5 w-3.5 text-neutral-500" />
-                    <span>Estimated delivery: <span className="text-neutral-200 font-medium">{formatDate(p.delivery_date)}</span></span>
+                    <Clock className="h-3.5 w-3.5 text-neutral-500" />
+                    <span>Estimated time: <span className="text-neutral-200 font-medium">{p.delivery_date} hour{p.delivery_date !== '1' ? 's' : ''}</span></span>
                   </div>
                 )}
 

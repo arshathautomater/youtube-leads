@@ -10,9 +10,9 @@ import CreateProjectModal from '@/components/CreateProjectModal';
 import EditProjectModal from '@/components/EditProjectModal';
 import type { Client, ClientProject } from '@/lib/types';
 
-function formatDate(d: string) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+function formatHours(h: string) {
+  if (!h) return null;
+  return `${h} hour${h !== '1' ? 's' : ''}`;
 }
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -133,7 +133,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   </div>
                   <StageBadge stage={p.stage} />
                   {p.delivery_date && (
-                    <p className="text-xs text-neutral-500">Est. delivery: <span className="text-neutral-300">{formatDate(p.delivery_date)}</span></p>
+                    <p className="text-xs text-neutral-500">Est. time: <span className="text-neutral-300">{formatHours(p.delivery_date)}</span></p>
                   )}
                 </div>
               </div>
