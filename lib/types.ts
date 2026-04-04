@@ -58,6 +58,7 @@ export interface Client {
   name: string;
   email: string;
   token: string;
+  slug: string;
   created_at: string;
   updated_at: string;
 }

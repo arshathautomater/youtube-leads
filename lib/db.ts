@@ -124,6 +124,7 @@ export async function initSchema(): Promise<void> {
     `ALTER TABLE qualified_channels ADD COLUMN contacted_at TEXT NOT NULL DEFAULT ''`,
     `UPDATE qualified_channels SET contacted_at = datetime('now') WHERE outreach_status IN ('contacted_x','contacted_instagram','contacted_skool','contacted_email') AND contacted_at = ''`,
     `ALTER TABLE client_projects ADD COLUMN token TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE clients ADD COLUMN slug TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try { await c.execute(sql); } catch { /* column already exists */ }
@@ -379,6 +380,10 @@ function generateClientToken(): string {
   return uuidv4().replace(/-/g, '').slice(0, 20);
 }
 
+function generateSlug(name: string): string {
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseClientRow(row: any): Client {
   return {
@@ -386,6 +391,7 @@ function parseClientRow(row: any): Client {
     name: row.name as string,
     email: row.email as string,
     token: row.token as string,
+    slug: (row.slug as string) ?? '',
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
   };
@@ -417,9 +423,10 @@ export async function addClient(name: string, email: string): Promise<Client> {
   const c = getClient();
   const id = uuidv4();
   const token = generateClientToken();
+  const slug = generateSlug(name);
   await c.execute({
-    sql: `INSERT INTO clients (id, name, email, token) VALUES (?, ?, ?, ?)`,
-    args: [id, name, email, token],
+    sql: `INSERT INTO clients (id, name, email, token, slug) VALUES (?, ?, ?, ?, ?)`,
+    args: [id, name, email, token, slug],
   });
   const result = await c.execute({ sql: `SELECT * FROM clients WHERE id = ?`, args: [id] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -436,6 +443,14 @@ export async function getClients(): Promise<Client[]> {
 export async function getClientByToken(token: string): Promise<Client | null> {
   await ensureSchema();
   const result = await getClient().execute({ sql: `SELECT * FROM clients WHERE token = ?`, args: [token] });
+  if (!result.rows[0]) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseClientRow(result.rows[0] as any);
+}
+
+export async function getClientBySlug(slug: string): Promise<Client | null> {
+  await ensureSchema();
+  const result = await getClient().execute({ sql: `SELECT * FROM clients WHERE slug = ?`, args: [slug] });
   if (!result.rows[0]) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return parseClientRow(result.rows[0] as any);
