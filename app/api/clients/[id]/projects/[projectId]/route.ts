@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { updateProject, deleteProject } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+import { updateProject, deleteProject, getClientById } from '@/lib/db';
 import type { ProductionStage } from '@/lib/types';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; projectId: string }> }) {
-  const { projectId } = await params;
+  const { id, projectId } = await params;
   const body = await req.json();
   const patch: { title?: string; thumbnail_url?: string; stage?: ProductionStage; delivery_date?: string; notes?: string; sort_order?: number } = {};
   if (body.title !== undefined) patch.title = body.title;
@@ -19,11 +20,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.sort_order !== undefined) patch.sort_order = body.sort_order;
   const project = await updateProject(projectId, patch);
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Bust portal caches immediately
+  const client = await getClientById(id);
+  if (client) {
+    revalidatePath(`/portal/${client.slug}`);
+    revalidatePath(`/c/${client.token}`);
+  }
+  if (project.token) revalidatePath(`/v/${project.token}`);
+
   return NextResponse.json({ project });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string; projectId: string }> }) {
-  const { projectId } = await params;
+  const { id, projectId } = await params;
+  const client = await getClientById(id);
   await deleteProject(projectId);
+  if (client) {
+    revalidatePath(`/portal/${client.slug}`);
+    revalidatePath(`/c/${client.token}`);
+  }
   return NextResponse.json({ ok: true });
 }

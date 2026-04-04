@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getProjectByToken, getProjectsByClientId, getClientById } from '@/lib/db';
 
+export const revalidate = 30;
+
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params;
   const project = await getProjectByToken(token);
