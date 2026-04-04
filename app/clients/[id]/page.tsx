@@ -52,7 +52,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   function getPortalUrl() {
     if (!client) return '';
-    return `${window.location.origin}/c/${client.token}`;
+    const host = window.location.host;
+    if (host.includes('editorkyro.com')) return `https://clientportal.editorkyro.com/${client.slug}`;
+    return `${window.location.origin}/portal/${client.slug}`;
   }
 
   function handleCopy() {
@@ -116,7 +118,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
                 Copy link
               </button>
-              <Link href={`/c/${client.token}`} target="_blank"
+              <Link href={`/portal/${client.slug}`} target="_blank"
                 className="p-2 rounded-xl border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 transition-colors">
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>

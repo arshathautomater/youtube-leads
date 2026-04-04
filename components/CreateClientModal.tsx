@@ -34,13 +34,16 @@ export default function CreateClientModal({ onClose, onCreate }: Props) {
     setLoading(false);
   }
 
-  function getPortalUrl(token: string) {
-    return `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${token}`;
+  function getPortalUrl(slug: string) {
+    if (typeof window === 'undefined') return '';
+    const host = window.location.host;
+    if (host.includes('editorkyro.com')) return `https://clientportal.editorkyro.com/${slug}`;
+    return `${window.location.origin}/portal/${slug}`;
   }
 
   function handleCopy() {
     if (!created) return;
-    navigator.clipboard.writeText(getPortalUrl(created.token));
+    navigator.clipboard.writeText(getPortalUrl(created.slug));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -57,7 +60,7 @@ export default function CreateClientModal({ onClose, onCreate }: Props) {
           <div className="p-5 flex flex-col gap-4">
             <p className="text-sm text-neutral-400">Share this private link with <span className="text-white font-medium">{created.name}</span>:</p>
             <div className="flex items-center gap-2 rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-2">
-              <span className="flex-1 text-xs text-neutral-300 truncate font-mono">{getPortalUrl(created.token)}</span>
+              <span className="flex-1 text-xs text-neutral-300 truncate font-mono">{getPortalUrl(created.slug)}</span>
               <button onClick={handleCopy} className="shrink-0 text-neutral-400 hover:text-white transition-colors">
                 {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
               </button>

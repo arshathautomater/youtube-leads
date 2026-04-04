@@ -19,12 +19,14 @@ export default function ClientsPage() {
     });
   }, []);
 
-  function getPortalUrl(token: string) {
-    return `${window.location.origin}/c/${token}`;
+  function getPortalUrl(client: Client) {
+    const host = window.location.host;
+    if (host.includes('editorkyro.com')) return `https://clientportal.editorkyro.com/${client.slug}`;
+    return `${window.location.origin}/portal/${client.slug}`;
   }
 
   function handleCopy(client: Client) {
-    navigator.clipboard.writeText(getPortalUrl(client.token));
+    navigator.clipboard.writeText(getPortalUrl(client));
     setCopiedId(client.id);
     setTimeout(() => setCopiedId(null), 2000);
   }
@@ -95,7 +97,7 @@ export default function ClientsPage() {
                   className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors">
                   {copiedId === c.id ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
                 </button>
-                <Link href={`/c/${c.token}`} target="_blank" title="Preview portal"
+                <Link href={`/portal/${c.slug}`} target="_blank" title="Preview portal"
                   className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors">
                   <ExternalLink className="h-4 w-4" />
                 </Link>
