@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Pencil, Trash2, Copy, Check, ExternalLink, Link2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Copy, Check, ExternalLink, Link2, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { use } from 'react';
 import StageProgressBar from '@/components/StageProgressBar';
@@ -37,6 +37,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [showCreate, setShowCreate] = useState(false);
   const [editProject, setEditProject] = useState<ClientProject | null>(null);
   const [copied, setCopied] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [paymentSaved, setPaymentSaved] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -45,6 +49,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     ]).then(([clientsData, projectsData]) => {
       const found = (clientsData.clients ?? []).find((c: Client) => c.id === id);
       setClient(found ?? null);
+      if (found) {
+        setPaymentAmount(found.payment_amount > 0 ? String(found.payment_amount) : '');
+        setPaymentNotes(found.payment_notes ?? '');
+      }
       setProjects(projectsData.projects ?? []);
       setLoading(false);
     });
@@ -81,6 +89,18 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   function getProjectUrl(p: ClientProject) {
     if (!p.token) return '';
     return `${window.location.origin}/v/${p.token}`;
+  }
+
+  async function handleSavePayment() {
+    setSavingPayment(true);
+    await fetch(`/api/clients/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_amount: Number(paymentAmount) || 0, payment_notes: paymentNotes }),
+    });
+    setSavingPayment(false);
+    setPaymentSaved(true);
+    setTimeout(() => setPaymentSaved(false), 2000);
   }
 
   const [copiedProjectId, setCopiedProjectId] = useState<string | null>(null);
@@ -194,6 +214,46 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           ))}
         </div>
       )}
+
+      {/* Payment — admin only, never shown to client */}
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <div className="rounded-lg bg-green-900/50 p-1.5">
+            <DollarSign className="h-4 w-4 text-green-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Payment <span className="text-xs text-neutral-600 font-normal ml-1">(private — not visible to client)</span></p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-neutral-500">Amount ($)</label>
+            <input
+              type="number" min="0" step="0.01"
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              placeholder="0.00"
+              className="rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-600 outline-none focus:border-neutral-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-neutral-500">Notes</label>
+            <input
+              value={paymentNotes}
+              onChange={(e) => setPaymentNotes(e.target.value)}
+              placeholder="e.g. Paid via PayPal"
+              className="rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-600 outline-none focus:border-neutral-500"
+            />
+          </div>
+        </div>
+        <button
+          onClick={handleSavePayment}
+          disabled={savingPayment}
+          className="self-start rounded-xl bg-green-700 hover:bg-green-600 disabled:opacity-50 px-4 py-2 text-sm font-medium text-white transition-colors flex items-center gap-2"
+        >
+          {paymentSaved ? <><Check className="h-4 w-4" /> Saved</> : savingPayment ? 'Saving…' : 'Save Payment'}
+        </button>
+      </div>
 
       {showCreate && (
         <CreateProjectModal

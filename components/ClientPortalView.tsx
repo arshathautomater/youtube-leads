@@ -27,6 +27,36 @@ export default function ClientPortalView({ clientName, projects }: { clientName:
         </div>
       </div>
 
+      {/* Stats */}
+      {projects.length > 0 && (() => {
+        const completed = projects.filter(p => p.stage === 'completed');
+        const totalHours = completed.reduce((sum, p) => sum + (p.duration_hours || 0), 0);
+        return (
+          <div className="border-b border-neutral-800/60 bg-neutral-900/20">
+            <div className="mx-auto max-w-2xl px-4 py-4 flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-white">{completed.length}</span>
+                <span className="text-xs text-neutral-500 mt-0.5">Videos completed</span>
+              </div>
+              <div className="w-px h-8 bg-neutral-800" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-white">{projects.length}</span>
+                <span className="text-xs text-neutral-500 mt-0.5">Total videos</span>
+              </div>
+              {totalHours > 0 && (
+                <>
+                  <div className="w-px h-8 bg-neutral-800" />
+                  <div className="flex flex-col">
+                    <span className="text-2xl font-bold text-white">{totalHours}h</span>
+                    <span className="text-xs text-neutral-500 mt-0.5">Hours of editing</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Projects */}
       <div className="mx-auto max-w-2xl px-4 py-8 flex flex-col gap-4">
         {projects.length === 0 ? (

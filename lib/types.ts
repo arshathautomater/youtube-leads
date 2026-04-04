@@ -59,6 +59,8 @@ export interface Client {
   email: string;
   token: string;
   slug: string;
+  payment_amount: number;
+  payment_notes: string;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +72,7 @@ export interface ClientProject {
   thumbnail_url: string;
   stage: ProductionStage;
   delivery_date: string;
+  duration_hours: number;
   notes: string;
   sort_order: number;
   token: string;

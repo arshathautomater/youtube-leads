@@ -126,6 +126,9 @@ export async function initSchema(): Promise<void> {
     `ALTER TABLE client_projects ADD COLUMN token TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE clients ADD COLUMN slug TEXT NOT NULL DEFAULT ''`,
     `UPDATE clients SET slug = lower(trim(replace(replace(replace(name,' ','-'),'.',''),',',''))) WHERE slug = ''`,
+    `ALTER TABLE client_projects ADD COLUMN duration_hours INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE clients ADD COLUMN payment_amount REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE clients ADD COLUMN payment_notes TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try { await c.execute(sql); } catch { /* column already exists */ }
@@ -393,6 +396,8 @@ function parseClientRow(row: any): Client {
     email: row.email as string,
     token: row.token as string,
     slug: (row.slug as string) ?? '',
+    payment_amount: Number(row.payment_amount ?? 0),
+    payment_notes: (row.payment_notes as string) ?? '',
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
   };
@@ -407,6 +412,7 @@ function parseProjectRow(row: any): ClientProject {
     thumbnail_url: row.thumbnail_url as string,
     stage: row.stage as ProductionStage,
     delivery_date: row.delivery_date as string,
+    duration_hours: Number(row.duration_hours ?? 0),
     notes: row.notes as string,
     sort_order: Number(row.sort_order ?? 0),
     token: (row.token as string) ?? '',
@@ -465,7 +471,7 @@ export async function getClientById(id: string): Promise<Client | null> {
   return parseClientRow(result.rows[0] as any);
 }
 
-export async function updateClient(id: string, patch: { name?: string; email?: string }): Promise<Client | null> {
+export async function updateClient(id: string, patch: { name?: string; email?: string; payment_amount?: number; payment_notes?: string }): Promise<Client | null> {
   await ensureSchema();
   const c = getClient();
   const fields: string[] = [];
@@ -473,6 +479,8 @@ export async function updateClient(id: string, patch: { name?: string; email?: s
   const args: Record<string, any> = { id };
   if (patch.name !== undefined) { fields.push('name = :name'); args.name = patch.name; }
   if (patch.email !== undefined) { fields.push('email = :email'); args.email = patch.email; }
+  if (patch.payment_amount !== undefined) { fields.push('payment_amount = :payment_amount'); args.payment_amount = patch.payment_amount; }
+  if (patch.payment_notes !== undefined) { fields.push('payment_notes = :payment_notes'); args.payment_notes = patch.payment_notes; }
   if (fields.length === 0) return getClientById(id);
   fields.push("updated_at = datetime('now')");
   await c.execute({ sql: `UPDATE clients SET ${fields.join(', ')} WHERE id = :id`, args });
@@ -491,16 +499,16 @@ export async function deleteClient(id: string): Promise<void> {
 
 export async function createProject(data: {
   client_id: string; title: string; thumbnail_url: string;
-  stage: ProductionStage; delivery_date: string; notes: string; sort_order: number;
+  stage: ProductionStage; delivery_date: string; duration_hours: number; notes: string; sort_order: number;
 }): Promise<ClientProject> {
   await ensureSchema();
   const c = getClient();
   const id = uuidv4();
   const token = generateProjectToken();
   await c.execute({
-    sql: `INSERT INTO client_projects (id, client_id, title, thumbnail_url, stage, delivery_date, notes, sort_order, token)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, data.client_id, data.title, data.thumbnail_url, data.stage, data.delivery_date, data.notes, data.sort_order, token],
+    sql: `INSERT INTO client_projects (id, client_id, title, thumbnail_url, stage, delivery_date, duration_hours, notes, sort_order, token)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, data.client_id, data.title, data.thumbnail_url, data.stage, data.delivery_date, data.duration_hours, data.notes, data.sort_order, token],
   });
   const result = await c.execute({ sql: `SELECT * FROM client_projects WHERE id = ?`, args: [id] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
