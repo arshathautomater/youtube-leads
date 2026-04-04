@@ -125,6 +125,7 @@ export async function initSchema(): Promise<void> {
     `UPDATE qualified_channels SET contacted_at = datetime('now') WHERE outreach_status IN ('contacted_x','contacted_instagram','contacted_skool','contacted_email') AND contacted_at = ''`,
     `ALTER TABLE client_projects ADD COLUMN token TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE clients ADD COLUMN slug TEXT NOT NULL DEFAULT ''`,
+    `UPDATE clients SET slug = lower(trim(replace(replace(replace(name,' ','-'),'.',''),',',''))) WHERE slug = ''`,
   ];
   for (const sql of migrations) {
     try { await c.execute(sql); } catch { /* column already exists */ }
