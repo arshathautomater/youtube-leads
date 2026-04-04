@@ -1,5 +1,12 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getProjectByToken, getProjectsByClientId, getClientById } from '@/lib/db';
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  const project = await getProjectByToken(token);
+  return { title: project ? `${project.title} | Production Portal` : 'Client Portal' };
+}
 import { Film, Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import StageBadge from '@/components/StageBadge';
