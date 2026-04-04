@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   const project = await getProjectByToken(token);
   return { title: project ? `${project.title} | Production Portal` : 'Client Portal' };
 }
-import { Film, Clock, ArrowLeft } from 'lucide-react';
+import { Film, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import StageBadge from '@/components/StageBadge';
 import StageProgressBar from '@/components/StageProgressBar';
@@ -35,10 +35,7 @@ function ProjectCard({ p, isMain }: { p: ClientProject; isMain: boolean }) {
         </div>
         <StageProgressBar stage={p.stage} />
         {p.delivery_date && isIso(p.delivery_date) && (
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-            <Clock className="h-3 w-3 shrink-0" />
-            <CountdownTimer deadline={p.delivery_date} />
-          </div>
+          <CountdownTimer deadline={p.delivery_date} />
         )}
         {p.notes && (
           <p className="text-xs text-neutral-500 leading-relaxed border-t border-neutral-800 pt-3">{p.notes}</p>

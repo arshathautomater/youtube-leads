@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, Film } from 'lucide-react';
+import { Film } from 'lucide-react';
 import Link from 'next/link';
 import StageBadge from './StageBadge';
 import StageProgressBar from './StageProgressBar';
@@ -57,10 +57,7 @@ export default function ClientPortalView({ clientName, projects }: { clientName:
 
                 {/* Countdown */}
                 {p.delivery_date && isIso(p.delivery_date) && (
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-                    <Clock className="h-3 w-3 shrink-0" />
-                    <CountdownTimer deadline={p.delivery_date} />
-                  </div>
+                  <CountdownTimer deadline={p.delivery_date} />
                 )}
 
                 {/* Notes */}
