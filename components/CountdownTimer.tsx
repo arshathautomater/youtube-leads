@@ -6,36 +6,37 @@ import { Clock } from 'lucide-react';
 function formatDelivery(ms: number): { line1: string; line2: string; urgent: boolean } {
   if (ms <= 0) return { line1: 'Your video is ready', line2: 'Delivery complete', urgent: false };
 
-  const totalMins = Math.floor(ms / 60000);
-  const hours = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
+  const totalSecs = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
   const days = Math.floor(hours / 24);
   const remHours = hours % 24;
 
   if (days >= 2) {
     return {
       line1: `Your video will be delivered in ${days} days`,
-      line2: `${remHours > 0 ? `${remHours}h remaining today` : 'On schedule'}`,
+      line2: `${remHours > 0 ? `${remHours}h ${mins}m ${secs}s remaining` : 'On schedule'}`,
       urgent: false,
     };
   }
   if (hours >= 24) {
     return {
       line1: 'Your video will be delivered tomorrow',
-      line2: `${remHours}h ${mins}m remaining`,
+      line2: `${remHours}h ${mins}m ${secs}s remaining`,
       urgent: false,
     };
   }
   if (hours >= 1) {
     return {
-      line1: `Your video will be delivered in ${hours}h ${mins}m`,
+      line1: `Your video will be delivered in ${hours}h ${mins}m ${secs}s`,
       line2: "We're working hard on it",
       urgent: hours < 3,
     };
   }
   return {
-    line1: `Your video will be delivered in ${mins} minutes`,
-    line2: "Almost there!",
+    line1: `Your video will be delivered in ${mins}m ${secs}s`,
+    line2: 'Almost there!',
     urgent: true,
   };
 }
@@ -46,7 +47,7 @@ export default function CountdownTimer({ deadline }: { deadline: string }) {
   useEffect(() => {
     const timer = setInterval(() => {
       setMs(new Date(deadline).getTime() - Date.now());
-    }, 30000);
+    }, 1000);
     return () => clearInterval(timer);
   }, [deadline]);
 
