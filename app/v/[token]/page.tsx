@@ -63,7 +63,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ token:
       {/* Header */}
       <div className="border-b border-neutral-800/60 bg-neutral-900/40 backdrop-blur-sm sticky top-0 z-10">
         <div className="mx-auto max-w-2xl px-4 py-4 flex items-center gap-3">
-          <Link href={`/c/${client?.token ?? ''}`} className="p-1.5 rounded-lg text-neutral-600 hover:text-white transition-colors">
+          <Link href={`/portal/${client?.slug ?? ''}`} className="p-1.5 rounded-lg text-neutral-600 hover:text-white transition-colors">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="rounded-lg bg-indigo-600 p-2">
@@ -79,6 +79,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ token:
       <div className="mx-auto max-w-2xl px-4 py-8 flex flex-col gap-6">
         {/* Current project */}
         <ProjectCard p={project} isMain />
+
+        {/* Back to all videos */}
+        {client && (
+          <Link
+            href={`/portal/${client.slug}`}
+            className="flex items-center justify-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900 hover:border-neutral-700 hover:bg-neutral-800 px-4 py-3 text-sm text-neutral-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            See all videos
+          </Link>
+        )}
 
         {/* Other projects */}
         {otherProjects.length > 0 && (

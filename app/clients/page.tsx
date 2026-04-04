@@ -87,7 +87,7 @@ export default function ClientsPage() {
                 <p className="font-medium text-white">{c.name}</p>
                 {c.email && <p className="text-xs text-neutral-500">{c.email}</p>}
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-xs text-neutral-600 font-mono truncate">/c/{c.token}</span>
+                  <span className="text-xs text-neutral-600 font-mono truncate">clientportal.editorkyro.com/{c.slug}</span>
                 </div>
               </div>
 
