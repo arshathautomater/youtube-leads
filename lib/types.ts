@@ -51,6 +51,30 @@ export interface Keyword {
   created_at: string;
 }
 
+export type ProductionStage = 'cutting' | 'editing' | 'intro_editing' | 'sfx' | 'final_checking' | 'completed';
+
+export interface Client {
+  id: string;
+  name: string;
+  email: string;
+  token: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientProject {
+  id: string;
+  client_id: string;
+  title: string;
+  thumbnail_url: string;
+  stage: ProductionStage;
+  delivery_date: string;
+  notes: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SearchResponse {
   videos: Video[];
   count: number;

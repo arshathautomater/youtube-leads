@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Youtube, AlertCircle, Star, BarChart3, Telescope, Plus, Bell } from 'lucide-react';
+import { Youtube, AlertCircle, Star, BarChart3, Telescope, Plus, Bell, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import SearchForm from '@/components/SearchForm';
 import FilterBar from '@/components/FilterBar';
@@ -182,6 +182,11 @@ export default function Home() {
             className="flex items-center gap-2 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors">
             <BarChart3 className="h-4 w-4" />
             Dashboard
+          </Link>
+          <Link href="/clients"
+            className="flex items-center gap-2 rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors">
+            <Briefcase className="h-4 w-4" />
+            Clients
           </Link>
           <button
             onClick={() => setShowSimilarModal(true)}

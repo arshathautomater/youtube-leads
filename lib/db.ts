@@ -1,6 +1,6 @@
 import { createClient } from '@libsql/client';
 import { v4 as uuidv4 } from 'uuid';
-import type { Video, Keyword, PitchStatus, QualifiedChannel, OutreachStatus } from './types';
+import type { Video, Keyword, PitchStatus, QualifiedChannel, OutreachStatus, Client, ClientProject, ProductionStage } from './types';
 
 let client: ReturnType<typeof createClient> | null = null;
 
@@ -83,6 +83,32 @@ export async function initSchema(): Promise<void> {
       sql: `CREATE TABLE IF NOT EXISTS disqualified_channels (
         channel_id      TEXT PRIMARY KEY,
         disqualified_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+      args: [],
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS clients (
+        id         TEXT PRIMARY KEY,
+        name       TEXT NOT NULL DEFAULT '',
+        email      TEXT NOT NULL DEFAULT '',
+        token      TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+      args: [],
+    },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS client_projects (
+        id            TEXT PRIMARY KEY,
+        client_id     TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+        title         TEXT NOT NULL DEFAULT '',
+        thumbnail_url TEXT NOT NULL DEFAULT '',
+        stage         TEXT NOT NULL DEFAULT 'cutting',
+        delivery_date TEXT NOT NULL DEFAULT '',
+        notes         TEXT NOT NULL DEFAULT '',
+        sort_order    INTEGER NOT NULL DEFAULT 0,
+        created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
       )`,
       args: [],
     },
@@ -344,4 +370,155 @@ export async function disqualifyChannel(channelId: string): Promise<void> {
 export async function undisqualifyChannel(channelId: string): Promise<void> {
   await ensureSchema();
   await getClient().execute({ sql: `DELETE FROM disqualified_channels WHERE channel_id = ?`, args: [channelId] });
+}
+
+// ── Clients ──────────────────────────────────────────────────────────────────
+
+function generateClientToken(): string {
+  return uuidv4().replace(/-/g, '').slice(0, 20);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseClientRow(row: any): Client {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    email: row.email as string,
+    token: row.token as string,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseProjectRow(row: any): ClientProject {
+  return {
+    id: row.id as string,
+    client_id: row.client_id as string,
+    title: row.title as string,
+    thumbnail_url: row.thumbnail_url as string,
+    stage: row.stage as ProductionStage,
+    delivery_date: row.delivery_date as string,
+    notes: row.notes as string,
+    sort_order: Number(row.sort_order ?? 0),
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+  };
+}
+
+export async function addClient(name: string, email: string): Promise<Client> {
+  await ensureSchema();
+  const c = getClient();
+  const id = uuidv4();
+  const token = generateClientToken();
+  await c.execute({
+    sql: `INSERT INTO clients (id, name, email, token) VALUES (?, ?, ?, ?)`,
+    args: [id, name, email, token],
+  });
+  const result = await c.execute({ sql: `SELECT * FROM clients WHERE id = ?`, args: [id] });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseClientRow(result.rows[0] as any);
+}
+
+export async function getClients(): Promise<Client[]> {
+  await ensureSchema();
+  const result = await getClient().execute(`SELECT * FROM clients ORDER BY created_at DESC`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return result.rows.map((r) => parseClientRow(r as any));
+}
+
+export async function getClientByToken(token: string): Promise<Client | null> {
+  await ensureSchema();
+  const result = await getClient().execute({ sql: `SELECT * FROM clients WHERE token = ?`, args: [token] });
+  if (!result.rows[0]) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseClientRow(result.rows[0] as any);
+}
+
+export async function getClientById(id: string): Promise<Client | null> {
+  await ensureSchema();
+  const result = await getClient().execute({ sql: `SELECT * FROM clients WHERE id = ?`, args: [id] });
+  if (!result.rows[0]) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseClientRow(result.rows[0] as any);
+}
+
+export async function updateClient(id: string, patch: { name?: string; email?: string }): Promise<Client | null> {
+  await ensureSchema();
+  const c = getClient();
+  const fields: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const args: Record<string, any> = { id };
+  if (patch.name !== undefined) { fields.push('name = :name'); args.name = patch.name; }
+  if (patch.email !== undefined) { fields.push('email = :email'); args.email = patch.email; }
+  if (fields.length === 0) return getClientById(id);
+  fields.push("updated_at = datetime('now')");
+  await c.execute({ sql: `UPDATE clients SET ${fields.join(', ')} WHERE id = :id`, args });
+  const result = await c.execute({ sql: `SELECT * FROM clients WHERE id = ?`, args: [id] });
+  if (!result.rows[0]) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseClientRow(result.rows[0] as any);
+}
+
+export async function deleteClient(id: string): Promise<void> {
+  await ensureSchema();
+  await getClient().execute({ sql: `DELETE FROM clients WHERE id = ?`, args: [id] });
+}
+
+// ── Client Projects ───────────────────────────────────────────────────────────
+
+export async function createProject(data: {
+  client_id: string; title: string; thumbnail_url: string;
+  stage: ProductionStage; delivery_date: string; notes: string; sort_order: number;
+}): Promise<ClientProject> {
+  await ensureSchema();
+  const c = getClient();
+  const id = uuidv4();
+  await c.execute({
+    sql: `INSERT INTO client_projects (id, client_id, title, thumbnail_url, stage, delivery_date, notes, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, data.client_id, data.title, data.thumbnail_url, data.stage, data.delivery_date, data.notes, data.sort_order],
+  });
+  const result = await c.execute({ sql: `SELECT * FROM client_projects WHERE id = ?`, args: [id] });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseProjectRow(result.rows[0] as any);
+}
+
+export async function getProjectsByClientId(clientId: string): Promise<ClientProject[]> {
+  await ensureSchema();
+  const result = await getClient().execute({
+    sql: `SELECT * FROM client_projects WHERE client_id = ? ORDER BY sort_order ASC, created_at ASC`,
+    args: [clientId],
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return result.rows.map((r) => parseProjectRow(r as any));
+}
+
+export async function updateProject(id: string, patch: {
+  title?: string; thumbnail_url?: string; stage?: ProductionStage;
+  delivery_date?: string; notes?: string; sort_order?: number;
+}): Promise<ClientProject | null> {
+  await ensureSchema();
+  const c = getClient();
+  const fields: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const args: Record<string, any> = { id };
+  if (patch.title !== undefined) { fields.push('title = :title'); args.title = patch.title; }
+  if (patch.thumbnail_url !== undefined) { fields.push('thumbnail_url = :thumbnail_url'); args.thumbnail_url = patch.thumbnail_url; }
+  if (patch.stage !== undefined) { fields.push('stage = :stage'); args.stage = patch.stage; }
+  if (patch.delivery_date !== undefined) { fields.push('delivery_date = :delivery_date'); args.delivery_date = patch.delivery_date; }
+  if (patch.notes !== undefined) { fields.push('notes = :notes'); args.notes = patch.notes; }
+  if (patch.sort_order !== undefined) { fields.push('sort_order = :sort_order'); args.sort_order = patch.sort_order; }
+  if (fields.length === 0) return null;
+  fields.push("updated_at = datetime('now')");
+  await c.execute({ sql: `UPDATE client_projects SET ${fields.join(', ')} WHERE id = :id`, args });
+  const result = await c.execute({ sql: `SELECT * FROM client_projects WHERE id = ?`, args: [id] });
+  if (!result.rows[0]) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseProjectRow(result.rows[0] as any);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await ensureSchema();
+  await getClient().execute({ sql: `DELETE FROM client_projects WHERE id = ?`, args: [id] });
 }
