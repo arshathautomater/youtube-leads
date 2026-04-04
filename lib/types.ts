@@ -71,6 +71,7 @@ export interface ClientProject {
   delivery_date: string;
   notes: string;
   sort_order: number;
+  token: string;
   created_at: string;
   updated_at: string;
 }

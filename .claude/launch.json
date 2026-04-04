@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "youtube-leads",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/Users/arshath/.nvm/versions/node/v20.20.1/bin/npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
     }

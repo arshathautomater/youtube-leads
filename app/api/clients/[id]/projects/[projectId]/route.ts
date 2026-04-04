@@ -9,7 +9,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.title !== undefined) patch.title = body.title;
   if (body.thumbnail_url !== undefined) patch.thumbnail_url = body.thumbnail_url;
   if (body.stage !== undefined) patch.stage = body.stage as ProductionStage;
-  if (body.delivery_date !== undefined) patch.delivery_date = body.delivery_date;
+  if (body.delivery_date !== undefined) {
+    const h = body.delivery_date;
+    patch.delivery_date = h && !isNaN(Number(h)) && Number(h) > 0
+      ? new Date(Date.now() + Number(h) * 3600000).toISOString()
+      : '';
+  }
   if (body.notes !== undefined) patch.notes = body.notes;
   if (body.sort_order !== undefined) patch.sort_order = body.sort_order;
   const project = await updateProject(projectId, patch);

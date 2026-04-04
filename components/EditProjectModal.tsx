@@ -24,7 +24,12 @@ export default function EditProjectModal({ project, clientId, onClose, onUpdate 
   const [title, setTitle] = useState(project.title);
   const [thumbnailUrl, setThumbnailUrl] = useState(project.thumbnail_url);
   const [stage, setStage] = useState<ProductionStage>(project.stage);
-  const [deliveryHours, setDeliveryHours] = useState(project.delivery_date);
+  const [deliveryHours, setDeliveryHours] = useState(() => {
+    if (!project.delivery_date) return '';
+    const ms = new Date(project.delivery_date).getTime() - Date.now();
+    if (isNaN(ms) || ms <= 0) return '';
+    return String(Math.ceil(ms / 3600000));
+  });
   const [notes, setNotes] = useState(project.notes);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

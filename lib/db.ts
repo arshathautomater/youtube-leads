@@ -123,6 +123,7 @@ export async function initSchema(): Promise<void> {
     `ALTER TABLE qualified_channels ADD COLUMN channel_thumbnail_url TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE qualified_channels ADD COLUMN contacted_at TEXT NOT NULL DEFAULT ''`,
     `UPDATE qualified_channels SET contacted_at = datetime('now') WHERE outreach_status IN ('contacted_x','contacted_instagram','contacted_skool','contacted_email') AND contacted_at = ''`,
+    `ALTER TABLE client_projects ADD COLUMN token TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try { await c.execute(sql); } catch { /* column already exists */ }
@@ -401,9 +402,14 @@ function parseProjectRow(row: any): ClientProject {
     delivery_date: row.delivery_date as string,
     notes: row.notes as string,
     sort_order: Number(row.sort_order ?? 0),
+    token: (row.token as string) ?? '',
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
   };
+}
+
+function generateProjectToken(): string {
+  return uuidv4().replace(/-/g, '').slice(0, 16);
 }
 
 export async function addClient(name: string, email: string): Promise<Client> {
@@ -474,10 +480,11 @@ export async function createProject(data: {
   await ensureSchema();
   const c = getClient();
   const id = uuidv4();
+  const token = generateProjectToken();
   await c.execute({
-    sql: `INSERT INTO client_projects (id, client_id, title, thumbnail_url, stage, delivery_date, notes, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, data.client_id, data.title, data.thumbnail_url, data.stage, data.delivery_date, data.notes, data.sort_order],
+    sql: `INSERT INTO client_projects (id, client_id, title, thumbnail_url, stage, delivery_date, notes, sort_order, token)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, data.client_id, data.title, data.thumbnail_url, data.stage, data.delivery_date, data.notes, data.sort_order, token],
   });
   const result = await c.execute({ sql: `SELECT * FROM client_projects WHERE id = ?`, args: [id] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -521,4 +528,12 @@ export async function updateProject(id: string, patch: {
 export async function deleteProject(id: string): Promise<void> {
   await ensureSchema();
   await getClient().execute({ sql: `DELETE FROM client_projects WHERE id = ?`, args: [id] });
+}
+
+export async function getProjectByToken(token: string): Promise<ClientProject | null> {
+  await ensureSchema();
+  const result = await getClient().execute({ sql: `SELECT * FROM client_projects WHERE token = ?`, args: [token] });
+  if (!result.rows[0]) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return parseProjectRow(result.rows[0] as any);
 }
